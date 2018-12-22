@@ -29,10 +29,26 @@ impl Lexier {
         self.skip();
         
         match self.ch {
-            '=' => token = Token::ASSIGN    { literal: self.ch.to_string() },
+            '=' => {
+                if self.peek_char() == '=' {
+                    token = Token::EQ { literal: "==".to_string() };
+                    self.read_char();
+                }
+                else {
+                    token = Token::ASSIGN    { literal: self.ch.to_string() }
+                }
+            },
             '+' => token = Token::PLUS      { literal: self.ch.to_string() },
             '-' => token = Token::MINUS     { literal: self.ch.to_string() },
-            '!' => token = Token::BANG      { literal: self.ch.to_string() },
+            '!' => {
+                if self.peek_char() == '=' {
+                    token = Token::NOT_EQ { literal: "!=".to_string() };
+                    self.read_char();
+                }
+                else {
+                    token = Token::BANG      { literal: self.ch.to_string() };
+                }
+            },
             '*' => token = Token::ASTERISK  { literal: self.ch.to_string() },
             '/' => token = Token::SLASH     { literal: self.ch.to_string() },
             '<' => token = Token::LT        { literal: self.ch.to_string() },
@@ -105,6 +121,14 @@ impl Lexier {
         integer
     }
 
+    /// Read peek character
+    fn peek_char(&mut self) -> char{
+        if self.read_position >= self.input.len() as u32 {
+            return '\0'
+        }
+        self.input.chars().nth(self.read_position as usize).unwrap()
+    }
+    
     /// Skip meaningless character (e.x. whitespace)
     fn skip(&mut self) {
         if self.ch == ' ' || self.ch == '\t' || self.ch == '\n' || self.ch == '\r' {
@@ -134,6 +158,8 @@ return true;\
 } else {\
 return false;\
 }\
+10 == 10;\
+10 != 9;\
 ".to_string();
     let mut lexier = Lexier::new(input);
 
@@ -162,6 +188,8 @@ return false;\
             Token::IF { ref literal } => println!("IF: {}", literal),
             Token::ELSE { ref literal } => println!("ELSE: {}", literal),
             Token::RETURN { ref literal } => println!("RETURN: {}", literal),
+            Token::EQ { ref literal } => println!("EQ: {}", literal),
+            Token::NOT_EQ { ref literal } => println!("NOT_EQ: {}", literal),
             Token::EOF { ref literal } if literal == "" => { println!("EOF: {}", literal ); break; },
             _ => assert!(false)
         };

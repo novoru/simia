@@ -1,4 +1,3 @@
-#[derive(PartialEq)]
 pub enum Token {
     ILLEGAL { literal: String},
     EOF  { literal: String},
@@ -10,11 +9,13 @@ pub enum Token {
     ASSIGN { literal: String},     // '='
     PLUS { literal: String},       // '+'
     MINUS { literal: String},      // '-'
-    BANG { literal: String},      // '!'
+    BANG { literal: String},       // '!'
     ASTERISK { literal: String},   // '*'
     SLASH { literal: String},      // '/'
     LT { literal: String},         // '<'
     GT { literal: String},         // '>'
+    EQ { literal: String},         // '=='
+    NOT_EQ { literal: String},     // '!='
 
     // delimeter
     COMMA { literal: String},      // ','
