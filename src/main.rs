@@ -1,6 +1,6 @@
-use monkey::lexier::Lexier;
-use monkey::token::Token;
-use monkey::repl;
+use simia::lexier::Lexier;
+use simia::token::Token;
+use simia::repl;
 
 fn main() {
     repl::start()
