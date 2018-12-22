@@ -1,3 +1,4 @@
+#[derive(PartialEq)]
 pub enum Token {
     ILLEGAL { literal: String},
     EOF  { literal: String},

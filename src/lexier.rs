@@ -24,6 +24,8 @@ impl Lexier {
 
     pub fn next_token(&mut self) -> Token {
         let token: Token;
+        self.skip();
+        
         match self.ch {
             '=' => token = Token::ASSIGN    { literal: self.ch.to_string() },
             '+' => token = Token::PLUS      { literal: self.ch.to_string() },
@@ -34,6 +36,8 @@ impl Lexier {
             ',' => token = Token::COMMA     { literal: self.ch.to_string() },
             ';' => token = Token::SEMICOLON { literal: self.ch.to_string() },
             '\0' => token = Token::EOF { literal: "".to_string() },
+            'a'...'z' | 'A' ... 'Z' | '_' => token = Token::IDENT { literal: self.read_identifier() },
+            '0' ... '9' => token = Token::INT { literal: self.read_integer() },
             _  => token = Token::ILLEGAL    { literal: self.ch.to_string() },
         }
 
@@ -41,7 +45,7 @@ impl Lexier {
         token
     }
 
-    pub fn read_char(&mut self) {
+    fn read_char(&mut self) {
         if self.read_position >= self.input.len() as u32 {
             self.ch = '\0';
         }
@@ -52,40 +56,68 @@ impl Lexier {
         self.position = self.read_position;
         self.read_position += 1;
     }
+
+    fn read_identifier(&mut self) -> String {
+        let mut identifier = "".to_string();
+        while self.ch.is_alphabetic() || self.ch == '_' {
+            identifier.push(self.ch);
+            self.read_char();
+        }
+ 
+        identifier
+    }
+
+    fn read_integer(&mut self) -> String {
+        let mut integer = "".to_string();
+        loop {
+            match self.ch {
+                '0' ... '9' => integer.push(self.ch),
+                _ => break,
+            }
+            self.read_char();
+        }
+
+        integer
+    }
+
+    fn skip(&mut self) {
+        if self.ch == ' ' || self.ch == '\t' || self.ch == '\n' || self.ch == '\r' {
+            self.read_char();
+        }
+    }
     
 }
 
 
 #[test]
 fn test_next_token() {
-    let input = "=+(){},;".to_string();
-
-    let tests = [ Token::ASSIGN    { literal: "=".to_string() },
-                  Token::PLUS      { literal: "+".to_string() },
-                  Token::LPAREN    { literal: "(".to_string() },
-                  Token::RPAREN    { literal: ")".to_string() },
-                  Token::LBRACE    { literal: "{".to_string() },
-                  Token::RBRACE    { literal: "}".to_string() },
-                  Token::COMMA     { literal: ",".to_string() },
-                  Token::SEMICOLON { literal: ";".to_string() },
-                  Token::EOF       { literal: "".to_string() }
-    ];
-
+    let input = "\
+let five = 5;\
+let ten = 10;\
+\
+let add = fn(x, y) {\
+x + y;\
+};\
+let result = add(five, ten);\
+".to_string();
     let mut lexier = Lexier::new(input);
-    
+
     loop {
         match lexier.next_token() {
-            Token::ASSIGN { literal } => assert!(true),
-            Token::PLUS { literal }   => assert!(true),
-            Token::LPAREN { literal } => assert!(true),
-            Token::RPAREN { literal } => assert!(true),
-            Token::LBRACE { literal } => assert!(true),
-            Token::RBRACE { literal } => assert!(true),
-            Token::COMMA { literal }  => assert!(true),
-            Token::SEMICOLON { literal } => assert!(true),
-            Token::EOF { literal } => { assert!(true); break; },
+            Token::ASSIGN { ref literal } if literal == "=" => println!("ASSIGN: {}", literal ),
+            Token::PLUS { ref literal }  if literal == "+"  => println!("PLUS: {}", literal ),
+            Token::LPAREN { ref literal } if literal == "(" => println!("LPAREN: {}", literal ),
+            Token::RPAREN { ref literal } if literal == ")" => println!("RPAREN: {}", literal ),
+            Token::LBRACE { ref literal } if literal == "{" => println!("LBRACE: {}", literal),
+            Token::RBRACE { ref literal } if literal == "}" => println!("RBRACE: {}", literal),
+            Token::COMMA { ref literal }  if literal == "," => println!("COMMA: {}", literal),
+            Token::SEMICOLON { ref literal } if literal == ";" => println!("SEMICOLON: {}", literal),
+            Token::EOF { ref literal } if literal == "" => { println!("EOF: {}", literal ); break; },
+            Token::IDENT {ref literal } => println!("IDENT: {}", literal),
+            Token::INT { ref literal } => println!("INT: {}", literal),
             _ => assert!(false)
         };
     }
+
     
 }
