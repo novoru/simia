@@ -161,46 +161,113 @@ return false;\
 10 == 10;\
 10 != 9;\
 ".to_string();
+
+    let tests = [ Token { kind: TokenKind::IDENT, literal: "foo".to_string() },
+                  Token { kind: TokenKind::SEMICOLON, literal: ";".to_string() },
+                  
+                  Token { kind: TokenKind::IDENT, literal: "bar".to_string() },
+                  Token { kind: TokenKind::SEMICOLON, literal: ";".to_string() },
+                  
+                  Token { kind: TokenKind::LET, literal: "let".to_string() },
+                  Token { kind: TokenKind::IDENT, literal: "five".to_string() },
+                  Token { kind: TokenKind::ASSIGN, literal: "=".to_string() },
+                  Token { kind: TokenKind::INT, literal: "5".to_string() },
+                  Token { kind: TokenKind::SEMICOLON, literal: ";".to_string() },
+                  
+                  Token { kind: TokenKind::LET, literal: "let".to_string() },
+                  Token { kind: TokenKind::IDENT, literal: "ten".to_string() },
+                  Token { kind: TokenKind::ASSIGN, literal: "=".to_string() },
+                  Token { kind: TokenKind::INT, literal: "10".to_string() },
+                  Token { kind: TokenKind::SEMICOLON, literal: ";".to_string() },
+
+                  Token { kind: TokenKind::LET, literal: "let".to_string() },
+                  Token { kind: TokenKind::IDENT, literal: "add".to_string() },
+                  Token { kind: TokenKind::ASSIGN, literal: "=".to_string() },
+                  Token { kind: TokenKind::FUNCTION, literal: "fn".to_string() },
+                  Token { kind: TokenKind::LPAREN, literal: "(".to_string() },
+                  Token { kind: TokenKind::IDENT, literal: "x".to_string() },
+                  Token { kind: TokenKind::COMMA, literal: ",".to_string() },
+                  Token { kind: TokenKind::IDENT, literal: "y".to_string() },
+                  Token { kind: TokenKind::RPAREN, literal: ")".to_string() },
+                  Token { kind: TokenKind::LBRACE, literal: "{".to_string() },
+
+                  Token { kind: TokenKind::IDENT, literal: "x".to_string() },
+                  Token { kind: TokenKind::PLUS, literal: "+".to_string() },
+                  Token { kind: TokenKind::IDENT, literal: "y".to_string() },
+                  Token { kind: TokenKind::SEMICOLON, literal: ";".to_string() },
+
+                  Token { kind: TokenKind::RBRACE, literal: "}".to_string() },
+                  Token { kind: TokenKind::SEMICOLON, literal: ";".to_string() },
+                  
+                  Token { kind: TokenKind::LET, literal: "let".to_string() },
+                  Token { kind: TokenKind::IDENT, literal: "result".to_string() },
+                  Token { kind: TokenKind::ASSIGN, literal: "=".to_string() },
+                  Token { kind: TokenKind::IDENT, literal: "add".to_string() },
+                  Token { kind: TokenKind::LPAREN, literal: "(".to_string() },
+                  Token { kind: TokenKind::IDENT, literal: "five".to_string() },
+                  Token { kind: TokenKind::COMMA, literal: ",".to_string() },
+                  Token { kind: TokenKind::IDENT, literal: "ten".to_string() },
+                  Token { kind: TokenKind::RPAREN, literal: ")".to_string() },
+                  Token { kind: TokenKind::SEMICOLON, literal: ";".to_string() },
+                  
+                  Token { kind: TokenKind::BANG, literal: "!".to_string() },
+                  Token { kind: TokenKind::MINUS, literal: "-".to_string() },
+                  Token { kind: TokenKind::SLASH, literal: "/".to_string() },
+                  Token { kind: TokenKind::ASTERISK, literal: "*".to_string() },
+                  Token { kind: TokenKind::INT, literal: "5".to_string() },
+                  Token { kind: TokenKind::SEMICOLON, literal: ";".to_string() },
+
+                  Token { kind: TokenKind::INT, literal: "5".to_string() },
+                  Token { kind: TokenKind::LT, literal: "<".to_string() },
+                  Token { kind: TokenKind::INT, literal: "10".to_string() },
+                  Token { kind: TokenKind::GT, literal: ">".to_string() },
+                  Token { kind: TokenKind::INT, literal: "5".to_string() },
+                  Token { kind: TokenKind::SEMICOLON, literal: ";".to_string() },
+
+                  Token { kind: TokenKind::IF, literal: "if".to_string() },
+                  Token { kind: TokenKind::LPAREN, literal: "(".to_string() },
+                  Token { kind: TokenKind::INT, literal: "5".to_string() },
+                  Token { kind: TokenKind::LT, literal: "<".to_string() },
+                  Token { kind: TokenKind::INT, literal: "10".to_string() },
+                  Token { kind: TokenKind::RPAREN, literal: ")".to_string() },
+                  Token { kind: TokenKind::LBRACE, literal: "{".to_string() },
+
+                  Token { kind: TokenKind::RETURN, literal: "return".to_string() },
+                  Token { kind: TokenKind::TRUE, literal: "true".to_string() },
+                  Token { kind: TokenKind::SEMICOLON, literal: ";".to_string() },
+
+                  Token { kind: TokenKind::RBRACE, literal: "}".to_string() },
+                  Token { kind: TokenKind::ELSE, literal: "else".to_string() },
+                  Token { kind: TokenKind::LBRACE, literal: "{".to_string() },
+                  
+                  Token { kind: TokenKind::RETURN, literal: "return".to_string() },
+                  Token { kind: TokenKind::FALSE, literal: "false".to_string() },
+                  Token { kind: TokenKind::SEMICOLON, literal: ";".to_string() },
+                  
+                  Token { kind: TokenKind::RBRACE, literal: "}".to_string() },
+
+                  Token { kind: TokenKind::INT, literal: "10".to_string() },
+                  Token { kind: TokenKind::EQ, literal: "==".to_string() },
+                  Token { kind: TokenKind::INT, literal: "10".to_string() },
+                  Token { kind: TokenKind::SEMICOLON, literal: ";".to_string() },
+
+                  Token { kind: TokenKind::INT, literal: "10".to_string() },
+                  Token { kind: TokenKind::NOT_EQ, literal: "!=".to_string() },
+                  Token { kind: TokenKind::INT, literal: "9".to_string() },
+                  Token { kind: TokenKind::SEMICOLON, literal: ";".to_string() },
+                  
+    ];
+    
     let mut lexier = Lexier::new(input);
-
-    loop {
-        let token = lexier.next_token();
-        match token.kind {
-            TokenKind::IDENT => println!("IDENT: {}", token.literal),
-            TokenKind::INT => println!("INT: {}", token.literal),
-            TokenKind::ASSIGN => println!("ASSIGN: {}", token.literal),
-            TokenKind::PLUS => println!("PLUS: {}", token.literal),
-            TokenKind::MINUS => println!("MINUS: {}", token.literal),
-            TokenKind::BANG => println!("BANG: {}", token.literal),
-            TokenKind::ASTERISK => println!("ASTERISK: {}", token.literal),
-            TokenKind::SLASH => println!("SLASH: {}", token.literal),
-            TokenKind::LT => println!("LT: {}", token.literal),
-            TokenKind::GT => println!("GT: {}", token.literal),
-            TokenKind::EQ => println!("EQ: {}", token.literal),
-            TokenKind::NOT_EQ => println!("NOT_EQ: {}", token.literal),
-            TokenKind::COMMA => println!("COMMA: {}", token.literal),
-            TokenKind::SEMICOLON => println!("SEMICOLON: {}", token.literal),
-            TokenKind::LPAREN => println!("LPAREN: {}", token.literal),
-            TokenKind::RPAREN => println!("RPAREN: {}", token.literal),
-            TokenKind::LBRACE => println!("LBRACE: {}", token.literal),
-            TokenKind::RBRACE => println!("RBRACE: {}", token.literal),
-            TokenKind::FUNCTION => println!("FUNCTION: {}", token.literal),
-            TokenKind::LET => println!("LET: {}", token.literal),
-            TokenKind::TRUE => println!("TRUE: {}", token.literal),
-            TokenKind::FALSE => println!("FALSE: {}", token.literal),
-            TokenKind::IF => println!("IF: {}", token.literal),
-            TokenKind::ELSE => println!("ELSE: {}", token.literal),
-            TokenKind::RETURN => println!("RETURN: {}", token.literal),
-            TokenKind::EOF => {
-                println!("EOF: {}", token.literal);
-                break;
-            }
-            _ => {
-                println!("{}", token.literal);
-                assert!(false);
-            }
-        };
+    let mut token: Token;
+    
+    for test in tests.iter() {
+        token = lexier.next_token();
+        println!("input:\t{{ kind: {}, literal: {} }}", token.get_kind(), token.literal);
+        println!("test:\t{{ kind: {}, literal: {} }}", test.get_kind(), test.literal);
+        if token.get_kind() != test.get_kind() {
+            assert!(false);
+        }
     }
-
     
 }
