@@ -1,11 +1,11 @@
-use crate::token::{ Token };
+use crate::token::{ TokenKind, Token };
 
 /// Lexical Analyzer
 #[derive(Clone)]
 pub struct Lexier {
     input: String, 
-    position: u32,
-    read_position: u32,
+    position: usize,
+    read_position: usize,
     ch: char,
 }
 
@@ -31,41 +31,41 @@ impl Lexier {
         match self.ch {
             '=' => {
                 if self.peek_char() == '=' {
-                    token = Token::EQ { literal: "==".to_string() };
+                    token = Token {kind:TokenKind::EQ, literal: "==".to_string()};
                     self.read_char();
                 }
                 else {
-                    token = Token::ASSIGN    { literal: self.ch.to_string() }
+                    token = Token {kind: TokenKind::ASSIGN, literal: self.ch.to_string()};
                 }
             },
-            '+' => token = Token::PLUS      { literal: self.ch.to_string() },
-            '-' => token = Token::MINUS     { literal: self.ch.to_string() },
+            '+' => token = Token {kind: TokenKind::PLUS, literal: self.ch.to_string()},
+            '-' => token = Token {kind: TokenKind::MINUS, literal: self.ch.to_string()},
             '!' => {
                 if self.peek_char() == '=' {
-                    token = Token::NOT_EQ { literal: "!=".to_string() };
+                    token = Token {kind: TokenKind::NOT_EQ, literal: "!=".to_string()};
                     self.read_char();
                 }
                 else {
-                    token = Token::BANG      { literal: self.ch.to_string() };
+                    token = Token {kind: TokenKind::BANG, literal: self.ch.to_string()};
                 }
             },
-            '*' => token = Token::ASTERISK  { literal: self.ch.to_string() },
-            '/' => token = Token::SLASH     { literal: self.ch.to_string() },
-            '<' => token = Token::LT        { literal: self.ch.to_string() },
-            '>' => token = Token::GT        { literal: self.ch.to_string() },
-            '(' => token = Token::LPAREN    { literal: self.ch.to_string() },
-            ')' => token = Token::RPAREN    { literal: self.ch.to_string() },
-            '{' => token = Token::LBRACE    { literal: self.ch.to_string() },
-            '}' => token = Token::RBRACE    { literal: self.ch.to_string() },
-            ',' => token = Token::COMMA     { literal: self.ch.to_string() },
-            ';' => token = Token::SEMICOLON { literal: self.ch.to_string() },
-            '\0' => token = Token::EOF { literal: "".to_string() },
+            '*' => token = Token {kind: TokenKind::ASTERISK, literal: self.ch.to_string()},
+            '/' => token = Token {kind: TokenKind::SLASH, literal: self.ch.to_string()},
+            '<' => token = Token {kind: TokenKind::LT, literal: self.ch.to_string()},
+            '>' => token = Token {kind: TokenKind::GT,  literal: self.ch.to_string()},
+            '(' => token = Token {kind: TokenKind::LPAREN, literal: self.ch.to_string()},
+            ')' => token = Token {kind: TokenKind::RPAREN, literal: self.ch.to_string()},
+            '{' => token = Token {kind: TokenKind::LBRACE, literal: self.ch.to_string()},
+            '}' => token = Token {kind: TokenKind::RBRACE, literal: self.ch.to_string()},
+            ',' => token = Token {kind: TokenKind::COMMA, literal: self.ch.to_string()},
+            ';' => token = Token {kind: TokenKind::SEMICOLON, literal: self.ch.to_string()},
+            '\0' => token = Token {kind: TokenKind::EOF, literal: "".to_string()},
             'a'...'z' | 'A' ... 'Z' | '_' => {
                 let ident = self.read_identifier();
                 return self.lookup_ident(&ident)
             },
-            '0' ... '9' => return Token::INT { literal: self.read_integer() },
-            _  => token = Token::ILLEGAL    { literal: self.ch.to_string() },
+            '0' ... '9' => return Token {kind: TokenKind::INT, literal: self.read_integer()},
+            _  => token = Token {kind: TokenKind::ILLEGAL, literal: self.ch.to_string()},
         }
 
         self.read_char();
@@ -75,25 +75,25 @@ impl Lexier {
     /// Check whether ident is keywords, and return the suitable token. 
     fn lookup_ident(&mut self, ident: &str) -> Token {
         match ident {
-            "fn" => Token::FUNCTION { literal: ident.to_string() },
-            "let" => Token::LET { literal: ident.to_string() },
-            "true" => Token::TRUE { literal: ident.to_string() },
-            "false" => Token::FALSE { literal: ident.to_string() },
-            "if" => Token::IF { literal: ident.to_string() },
-            "else" => Token::ELSE { literal: ident.to_string() },
-            "return" => Token::RETURN {literal: ident.to_string() },
-            _ => Token::IDENT { literal: ident.to_string() }
+            "fn" => Token {kind: TokenKind::FUNCTION, literal: ident.to_string()},
+            "let" => Token {kind: TokenKind::LET, literal: ident.to_string()},
+            "true" => Token {kind: TokenKind::TRUE, literal: ident.to_string()},
+            "false" => Token {kind: TokenKind::FALSE, literal: ident.to_string()},
+            "if" => Token {kind: TokenKind::IF, literal: ident.to_string()},
+            "else" => Token {kind: TokenKind::ELSE, literal: ident.to_string()},
+            "return" => Token {kind: TokenKind::RETURN, literal: ident.to_string()},
+            _ => Token {kind: TokenKind::IDENT, literal: ident.to_string()}
         }
     }
 
     /// Increment current position 
     fn read_char(&mut self) {
-        if self.read_position >= self.input.len() as u32 {
+        if self.read_position >= self.input.len() {
             self.ch = '\0';
         }
         else {
             self.ch = self.input.chars()
-                .skip(self.read_position as usize).next().unwrap()
+                .skip(self.read_position).next().unwrap()
         }
         self.position = self.read_position;
         self.read_position += 1;
@@ -123,10 +123,10 @@ impl Lexier {
 
     /// Read peek character
     fn peek_char(&mut self) -> char{
-        if self.read_position >= self.input.len() as u32 {
+        if self.read_position >= self.input.len() {
             return '\0'
         }
-        self.input.chars().nth(self.read_position as usize).unwrap()
+        self.input.chars().nth(self.read_position).unwrap()
     }
     
     /// Skip meaningless character (e.x. whitespace)
@@ -164,34 +164,41 @@ return false;\
     let mut lexier = Lexier::new(input);
 
     loop {
-        match lexier.next_token() {
-            Token::ASSIGN { ref literal } if literal == "=" => println!("ASSIGN: {}", literal ),
-            Token::PLUS { ref literal }  if literal == "+"  => println!("PLUS: {}", literal ),
-            Token::MINUS { ref literal }  if literal == "-"  => println!("MINUS: {}", literal ),
-            Token::BANG { ref literal }  if literal == "!"  => println!("BANG: {}", literal ),
-            Token::ASTERISK { ref literal }  if literal == "*"  => println!("ASTERISK: {}", literal ),
-            Token::SLASH { ref literal }  if literal == "/"  => println!("SLASH: {}", literal ),
-            Token::LT { ref literal }  if literal == "<"  => println!("LT: {}", literal ),
-            Token::GT { ref literal }  if literal == ">"  => println!("GT: {}", literal ),
-            Token::LPAREN { ref literal } if literal == "(" => println!("LPAREN: {}", literal ),
-            Token::RPAREN { ref literal } if literal == ")" => println!("RPAREN: {}", literal ),
-            Token::LBRACE { ref literal } if literal == "{" => println!("LBRACE: {}", literal),
-            Token::RBRACE { ref literal } if literal == "}" => println!("RBRACE: {}", literal),
-            Token::COMMA { ref literal }  if literal == "," => println!("COMMA: {}", literal),
-            Token::SEMICOLON { ref literal } if literal == ";" => println!("SEMICOLON: {}", literal),
-            Token::IDENT {ref literal } => println!("IDENT: {}", literal),
-            Token::INT { ref literal } => println!("INT: {}", literal),
-            Token::FUNCTION { ref literal } => println!("FN: {}", literal),
-            Token::LET { ref literal } => println!("LET: {}", literal),
-            Token::TRUE { ref literal } => println!("TRUE: {}", literal),
-            Token::FALSE { ref literal } => println!("FALSE: {}", literal),
-            Token::IF { ref literal } => println!("IF: {}", literal),
-            Token::ELSE { ref literal } => println!("ELSE: {}", literal),
-            Token::RETURN { ref literal } => println!("RETURN: {}", literal),
-            Token::EQ { ref literal } => println!("EQ: {}", literal),
-            Token::NOT_EQ { ref literal } => println!("NOT_EQ: {}", literal),
-            Token::EOF { ref literal } if literal == "" => { println!("EOF: {}", literal ); break; },
-            _ => assert!(false)
+        let token = lexier.next_token();
+        match token.kind {
+            TokenKind::IDENT => println!("IDENT: {}", token.literal),
+            TokenKind::INT => println!("INT: {}", token.literal),
+            TokenKind::ASSIGN => println!("ASSIGN: {}", token.literal),
+            TokenKind::PLUS => println!("PLUS: {}", token.literal),
+            TokenKind::MINUS => println!("MINUS: {}", token.literal),
+            TokenKind::BANG => println!("BANG: {}", token.literal),
+            TokenKind::ASTERISK => println!("ASTERISK: {}", token.literal),
+            TokenKind::SLASH => println!("SLASH: {}", token.literal),
+            TokenKind::LT => println!("LT: {}", token.literal),
+            TokenKind::GT => println!("GT: {}", token.literal),
+            TokenKind::EQ => println!("EQ: {}", token.literal),
+            TokenKind::NOT_EQ => println!("NOT_EQ: {}", token.literal),
+            TokenKind::COMMA => println!("COMMA: {}", token.literal),
+            TokenKind::SEMICOLON => println!("SEMICOLON: {}", token.literal),
+            TokenKind::LPAREN => println!("LPAREN: {}", token.literal),
+            TokenKind::RPAREN => println!("RPAREN: {}", token.literal),
+            TokenKind::LBRACE => println!("LBRACE: {}", token.literal),
+            TokenKind::RBRACE => println!("RBRACE: {}", token.literal),
+            TokenKind::FUNCTION => println!("FUNCTION: {}", token.literal),
+            TokenKind::LET => println!("LET: {}", token.literal),
+            TokenKind::TRUE => println!("TRUE: {}", token.literal),
+            TokenKind::FALSE => println!("FALSE: {}", token.literal),
+            TokenKind::IF => println!("IF: {}", token.literal),
+            TokenKind::ELSE => println!("ELSE: {}", token.literal),
+            TokenKind::RETURN => println!("RETURN: {}", token.literal),
+            TokenKind::EOF => {
+                println!("EOF: {}", token.literal);
+                break;
+            }
+            _ => {
+                println!("{}", token.literal);
+                assert!(false);
+            }
         };
     }
 
