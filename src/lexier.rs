@@ -29,6 +29,12 @@ impl Lexier {
         match self.ch {
             '=' => token = Token::ASSIGN    { literal: self.ch.to_string() },
             '+' => token = Token::PLUS      { literal: self.ch.to_string() },
+            '-' => token = Token::MINUS     { literal: self.ch.to_string() },
+            '!' => token = Token::BANG      { literal: self.ch.to_string() },
+            '*' => token = Token::ASTERISK  { literal: self.ch.to_string() },
+            '/' => token = Token::SLASH     { literal: self.ch.to_string() },
+            '<' => token = Token::LT        { literal: self.ch.to_string() },
+            '>' => token = Token::GT        { literal: self.ch.to_string() },
             '(' => token = Token::LPAREN    { literal: self.ch.to_string() },
             ')' => token = Token::RPAREN    { literal: self.ch.to_string() },
             '{' => token = Token::LBRACE    { literal: self.ch.to_string() },
@@ -36,8 +42,8 @@ impl Lexier {
             ',' => token = Token::COMMA     { literal: self.ch.to_string() },
             ';' => token = Token::SEMICOLON { literal: self.ch.to_string() },
             '\0' => token = Token::EOF { literal: "".to_string() },
-            'a'...'z' | 'A' ... 'Z' | '_' => token = Token::IDENT { literal: self.read_identifier() },
-            '0' ... '9' => token = Token::INT { literal: self.read_integer() },
+            'a'...'z' | 'A' ... 'Z' | '_' => return Token::IDENT { literal: self.read_identifier() },
+            '0' ... '9' => return Token::INT { literal: self.read_integer() },
             _  => token = Token::ILLEGAL    { literal: self.ch.to_string() },
         }
 
@@ -69,11 +75,8 @@ impl Lexier {
 
     fn read_integer(&mut self) -> String {
         let mut integer = "".to_string();
-        loop {
-            match self.ch {
-                '0' ... '9' => integer.push(self.ch),
-                _ => break,
-            }
+        while self.ch.is_digit(10) {
+            integer.push(self.ch);
             self.read_char();
         }
 
@@ -92,6 +95,8 @@ impl Lexier {
 #[test]
 fn test_next_token() {
     let input = "\
+foo;\
+bar;\
 let five = 5;\
 let ten = 10;\
 \
@@ -99,6 +104,8 @@ let add = fn(x, y) {\
 x + y;\
 };\
 let result = add(five, ten);\
+!-/*5 ;\
+5 < 10 > 5;\
 ".to_string();
     let mut lexier = Lexier::new(input);
 
@@ -106,6 +113,12 @@ let result = add(five, ten);\
         match lexier.next_token() {
             Token::ASSIGN { ref literal } if literal == "=" => println!("ASSIGN: {}", literal ),
             Token::PLUS { ref literal }  if literal == "+"  => println!("PLUS: {}", literal ),
+            Token::MINUS { ref literal }  if literal == "-"  => println!("MINUS: {}", literal ),
+            Token::BANG { ref literal }  if literal == "!"  => println!("BANG: {}", literal ),
+            Token::ASTERISK { ref literal }  if literal == "*"  => println!("ASTERISK: {}", literal ),
+            Token::SLASH { ref literal }  if literal == "/"  => println!("SLASH: {}", literal ),
+            Token::LT { ref literal }  if literal == "<"  => println!("LT: {}", literal ),
+            Token::GT { ref literal }  if literal == ">"  => println!("GT: {}", literal ),
             Token::LPAREN { ref literal } if literal == "(" => println!("LPAREN: {}", literal ),
             Token::RPAREN { ref literal } if literal == ")" => println!("RPAREN: {}", literal ),
             Token::LBRACE { ref literal } if literal == "{" => println!("LBRACE: {}", literal),

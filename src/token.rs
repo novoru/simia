@@ -9,6 +9,12 @@ pub enum Token {
     // operator
     ASSIGN { literal: String},     // '='
     PLUS { literal: String},       // '+'
+    MINUS { literal: String},      // '-'
+    BANG { literal: String},      // '!'
+    ASTERISK { literal: String},   // '*'
+    SLASH { literal: String},      // '/'
+    LT { literal: String},         // '<'
+    GT { literal: String},         // '>'
 
     // delimeter
     COMMA { literal: String},      // ','
