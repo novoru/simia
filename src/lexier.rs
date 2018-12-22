@@ -1,6 +1,7 @@
 use crate::token::{ Token };
 
-
+/// Lexical Analyzer
+#[derive(Clone)]
 pub struct Lexier {
     input: String, 
     position: u32,
@@ -22,6 +23,7 @@ impl Lexier {
         lexier
     }
 
+    /// Tokenize input string 
     pub fn next_token(&mut self) -> Token {
         let token: Token;
         self.skip();
@@ -42,7 +44,10 @@ impl Lexier {
             ',' => token = Token::COMMA     { literal: self.ch.to_string() },
             ';' => token = Token::SEMICOLON { literal: self.ch.to_string() },
             '\0' => token = Token::EOF { literal: "".to_string() },
-            'a'...'z' | 'A' ... 'Z' | '_' => return Token::IDENT { literal: self.read_identifier() },
+            'a'...'z' | 'A' ... 'Z' | '_' => {
+                let ident = self.read_identifier();
+                return self.lookup_ident(&ident)
+            },
             '0' ... '9' => return Token::INT { literal: self.read_integer() },
             _  => token = Token::ILLEGAL    { literal: self.ch.to_string() },
         }
@@ -51,6 +56,21 @@ impl Lexier {
         token
     }
 
+    /// Check whether ident is keywords, and return the suitable token. 
+    fn lookup_ident(&mut self, ident: &str) -> Token {
+        match ident {
+            "fn" => Token::FUNCTION { literal: ident.to_string() },
+            "let" => Token::LET { literal: ident.to_string() },
+            "true" => Token::TRUE { literal: ident.to_string() },
+            "false" => Token::FALSE { literal: ident.to_string() },
+            "if" => Token::IF { literal: ident.to_string() },
+            "else" => Token::ELSE { literal: ident.to_string() },
+            "return" => Token::RETURN {literal: ident.to_string() },
+            _ => Token::IDENT { literal: ident.to_string() }
+        }
+    }
+
+    /// Increment current position 
     fn read_char(&mut self) {
         if self.read_position >= self.input.len() as u32 {
             self.ch = '\0';
@@ -63,6 +83,7 @@ impl Lexier {
         self.read_position += 1;
     }
 
+    /// Read current character as identifier
     fn read_identifier(&mut self) -> String {
         let mut identifier = "".to_string();
         while self.ch.is_alphabetic() || self.ch == '_' {
@@ -73,6 +94,7 @@ impl Lexier {
         identifier
     }
 
+    /// Read current character as integer
     fn read_integer(&mut self) -> String {
         let mut integer = "".to_string();
         while self.ch.is_digit(10) {
@@ -83,6 +105,7 @@ impl Lexier {
         integer
     }
 
+    /// Skip meaningless character (e.x. whitespace)
     fn skip(&mut self) {
         if self.ch == ' ' || self.ch == '\t' || self.ch == '\n' || self.ch == '\r' {
             self.read_char();
@@ -106,6 +129,11 @@ x + y;\
 let result = add(five, ten);\
 !-/*5 ;\
 5 < 10 > 5;\
+if( 5 < 10 ) {\
+return true;\
+} else {\
+return false;\
+}\
 ".to_string();
     let mut lexier = Lexier::new(input);
 
@@ -125,9 +153,16 @@ let result = add(five, ten);\
             Token::RBRACE { ref literal } if literal == "}" => println!("RBRACE: {}", literal),
             Token::COMMA { ref literal }  if literal == "," => println!("COMMA: {}", literal),
             Token::SEMICOLON { ref literal } if literal == ";" => println!("SEMICOLON: {}", literal),
-            Token::EOF { ref literal } if literal == "" => { println!("EOF: {}", literal ); break; },
             Token::IDENT {ref literal } => println!("IDENT: {}", literal),
             Token::INT { ref literal } => println!("INT: {}", literal),
+            Token::FUNCTION { ref literal } => println!("FN: {}", literal),
+            Token::LET { ref literal } => println!("LET: {}", literal),
+            Token::TRUE { ref literal } => println!("TRUE: {}", literal),
+            Token::FALSE { ref literal } => println!("FALSE: {}", literal),
+            Token::IF { ref literal } => println!("IF: {}", literal),
+            Token::ELSE { ref literal } => println!("ELSE: {}", literal),
+            Token::RETURN { ref literal } => println!("RETURN: {}", literal),
+            Token::EOF { ref literal } if literal == "" => { println!("EOF: {}", literal ); break; },
             _ => assert!(false)
         };
     }

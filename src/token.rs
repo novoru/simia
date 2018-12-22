@@ -28,6 +28,11 @@ pub enum Token {
     // keyword
     FUNCTION { literal: String},   // 'fn'
     LET { literal: String},        // 'let'
+    TRUE { literal: String},       // 'true'
+    FALSE { literal: String},      // 'false'
+    IF { literal: String},         // 'if'
+    ELSE { literal: String},       // 'else'
+    RETURN { literal:String },     // 'return'
 }
 
 
