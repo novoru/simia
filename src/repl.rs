@@ -1,5 +1,5 @@
 use crate::lexier::Lexier;
-use crate::token::{ TokenKind, Token };
+use crate::token::{ TokenKind };
 use std::io::{ self, Write, stdin };
 
 

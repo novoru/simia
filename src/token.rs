@@ -1,3 +1,4 @@
+#[derive(Debug, Clone)]
 pub enum TokenKind {
     ILLEGAL,
     EOF,
@@ -36,6 +37,7 @@ pub enum TokenKind {
     RETURN,     // 'return'
 }
 
+#[derive(Debug, Clone)]
 pub struct Token {
     pub kind: TokenKind,
     pub literal: String,

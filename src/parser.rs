@@ -1,0 +1,138 @@
+use crate::ast:: { AST, Identifier };
+use crate::lexier:: { Lexier };
+use crate::token:: { TokenKind, Token};
+
+#[derive(Debug, Clone)]
+pub struct Parser {
+    pub lexier: Lexier,
+    pub cur_token: Token,
+    pub peek_token: Token,
+}
+
+impl Parser {
+    pub fn new(lexier: Lexier) -> Parser {
+        let mut parser = Parser { lexier: lexier,
+                                  cur_token:  Token {
+                                      kind: TokenKind::ILLEGAL,
+                                      literal: "".to_string()},
+                                  peek_token: Token {
+                                      kind: TokenKind::ILLEGAL,
+                                      literal: "".to_string()},
+        };
+        parser.next_token();
+        parser.next_token();
+
+        parser
+    }
+
+    pub fn next_token(&mut self) {
+        self.cur_token = self.peek_token.clone();
+        self.peek_token = self.lexier.next_token();
+    }
+    
+    pub fn parse_program(&mut self) -> Option<AST> {
+        let mut program = AST::PROGRAM { statements: Vec::new() };
+        
+        while self.cur_token.kind.clone() as u8 != TokenKind::EOF.clone() as u8 {
+            let statement = self.parse_statement();
+
+            if let None = statement {;}
+            else {
+                if let AST::PROGRAM { ref mut statements } = program {
+                    statements.push(statement.unwrap());
+                }
+            }
+
+            self.next_token();
+        }
+
+        Some(program)
+    }
+
+    fn parse_statement(&mut self) -> Option<AST>{
+        match self.cur_token.kind {
+            TokenKind::LET => Some(self.parse_let_statement().unwrap()),
+            _ => None
+        }
+    }
+
+    fn parse_let_statement(&mut self) -> Option<AST>{
+
+        if !self.expect_peek(TokenKind::IDENT) {
+            return None
+        }
+        
+        let ident = Identifier {
+            token: self.cur_token.clone(),
+            value: self.cur_token.clone().literal,
+        };
+
+        if !self.expect_peek(TokenKind::ASSIGN) {
+            return None
+        }
+
+        // TODO: change statement value to valid expression
+        let value = AST::EXPRESSION { literal: "".to_string() };
+        
+        Some( AST::LET_STATEMENT {
+            token: self.cur_token.clone(),
+            name: "".to_string(),
+            ident: Box::new(ident),
+            value: Box::new(value),
+        })
+    }
+
+    fn cur_token_is(&mut self, kind: TokenKind) -> bool {
+        self.cur_token.kind.clone() as u8  == kind as u8
+    }
+    
+    fn peek_token_is(&mut self, kind: TokenKind) -> bool {
+        self.peek_token.kind.clone() as u8 == kind as u8
+    }
+    
+    fn expect_peek(&mut self, kind: TokenKind) -> bool {
+        if self.peek_token_is(kind) {
+            self.next_token();
+            return true;
+        }
+
+        false
+    }
+}
+
+
+#[test]
+fn test_let_statements() {
+    let input = "\
+let x = 5;\
+let y = 10;\
+let foobar = 838383;\
+".to_string();
+
+    let mut lexier = Lexier::new(input);
+    let mut parser = Parser::new(lexier);
+
+    let mut program = parser.parse_program().unwrap();
+
+    match program {
+        AST::PROGRAM { ref statements } if statements.len() == 3 => (),
+        AST::PROGRAM { ref statements } =>
+            panic!("program does not contain 3 statements. got={}", statements.len()),
+        _ => panic!("parse_program() returned None. ")
+    }
+    
+    let expected_let_statements = [  ( "x".to_string(), 5),
+                                     ( "y".to_string(), 10),
+                                     ( "foobar".to_string(), 838383)
+    ];
+
+    for (i, expected) in expected_let_statements.iter().enumerate() {
+        if let AST::PROGRAM { ref statements } = program {
+            if let AST::LET_STATEMENT { ref ident, ..}= statements[i] {
+                //: TODO check vallue of let statement
+                assert_eq!(ident.value, *expected.0);
+            }
+        }
+    }
+    
+}

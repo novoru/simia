@@ -1,7 +1,7 @@
 use crate::token::{ TokenKind, Token };
 
 /// Lexical Analyzer
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Lexier {
     input: String, 
     position: usize,
@@ -263,10 +263,10 @@ return false;\
     
     for test in tests.iter() {
         token = lexier.next_token();
-        println!("input:\t{{ kind: {}, literal: {} }}", token.get_kind(), token.literal);
-        println!("test:\t{{ kind: {}, literal: {} }}", test.get_kind(), test.literal);
+        //println!("input:\t{{ kind: {}, literal: {} }}", token.get_kind(), token.literal);
+        //println!("test:\t{{ kind: {}, literal: {} }}", test.get_kind(), test.literal);
         if token.get_kind() != test.get_kind() {
-            assert!(false);
+            panic!("token.kind not equal test.kind.");
         }
     }
     
