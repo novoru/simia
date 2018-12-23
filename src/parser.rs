@@ -143,7 +143,6 @@ let foobar = 838383;\
     let mut program = parser.parse_program().unwrap();
     parser.check_parser_errors();
 
-    /*
     match program {
         AST::PROGRAM { ref statements } if statements.len() == 3 => (),
         AST::PROGRAM { ref statements } =>
@@ -164,6 +163,5 @@ let foobar = 838383;\
             }
         }
     }
-     */
     
 }
