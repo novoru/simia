@@ -77,11 +77,12 @@ impl Parser {
         }
 
         // TODO: change statement value to valid expression
-        let value = AST::EXPRESSION { literal: "".to_string() };
+        let value = AST::EXPRESSION {
+            token: Token { kind: TokenKind::ILLEGAL, literal: "".to_string() }
+        };
         
         Some( AST::LET_STATEMENT {
             token: self.cur_token.clone(),
-            name: "".to_string(),
             ident: Box::new(ident),
             value: Box::new(value),
         })
@@ -92,7 +93,12 @@ impl Parser {
         let ret = AST::RETURN_STATEMENT {
             token: self.cur_token.clone(),
             return_value: Box::new(
-                AST::EXPRESSION { literal: "".to_string()}
+                AST::EXPRESSION {
+                    token: Token {
+                        kind: TokenKind::ILLEGAL,
+                        literal: "".to_string(),
+                    }
+                }
             )
         };
 
@@ -213,7 +219,7 @@ return 993322;\
     for (i, expected) in expected_return_value.iter().enumerate() {
         if let AST::PROGRAM { ref statements } = program {
             if let AST::RETURN_STATEMENT { ref token, .. } = statements[i] {
-                //: TODO check vallue of let statement
+                //: TODO check return value
                 assert_eq!(token.literal, "return");
             }
         }
