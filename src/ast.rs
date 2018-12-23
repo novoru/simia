@@ -1,28 +1,27 @@
 use crate::token:: { TokenKind, Token };
 
 #[derive(Debug, Clone)]
-pub struct Identifier {
-    pub token: Token,
-    pub value: String,
-}
-
-#[derive(Debug, Clone)]
 pub enum AST {
-    PROGRAM { statements: Vec<AST> },
+    PROGRAM { statements: Vec<Box<AST>> },
 
     EXPRESSION {
         token: Token,
     },
+
+    IDENT {
+        token: Token,
+        value: String,
+    },
     
     LET_STATEMENT {
         token: Token,
-        ident: Box<Identifier>,
-        value: Box<AST>
+        ident: Box<AST>,
+        value: Box<AST>,
     },
 
     RETURN_STATEMENT {
         token: Token,
-        return_value: Box<AST>
+        return_value: Box<AST>,
     },
     
     EXPRESSION_STATEMENT {
@@ -41,9 +40,12 @@ impl AST {
                     string = format!("{}{}", string, statement.to_string() );
                 }
             },
+            AST::IDENT { token, value } => {
+                string = format!("{}", value);
+            },
             AST::LET_STATEMENT {token, ident, value} => {
                 string = format!("{} {} = {};",
-                                 token.literal, ident.value, value.to_string());
+                                 token.literal, ident.to_string(), value.to_string());
             },
             AST::RETURN_STATEMENT { token, return_value } => {
                 string = format!("{} {};", token.literal, return_value.to_string());
@@ -65,29 +67,31 @@ impl AST {
 fn test_ast_string() {
     let program = AST::PROGRAM {
         statements: vec![
-            AST::LET_STATEMENT {
-                token: Token {
-                    kind: TokenKind::LET,
-                    literal: "let".to_string()
-                },
-                ident: Box::new(
-                    Identifier {
-                        token: Token {
-                            kind: TokenKind::IDENT,
-                            literal: "myVar".to_string()
+            Box::new(
+                AST::LET_STATEMENT {
+                    token: Token {
+                        kind: TokenKind::LET,
+                        literal: "let".to_string()
+                    },
+                    ident: Box::new(
+                        AST::IDENT {
+                            token: Token {
+                                kind: TokenKind::IDENT,
+                                literal: "myVar".to_string()
                         },
-                        value: "myVar".to_string()
-                    }
-                ),
-                value: Box::new(
-                    AST::EXPRESSION {
-                        token: Token {
-                            kind: TokenKind::IDENT,
-                            literal: "anotherVar".to_string()
+                            value: "myVar".to_string()
                         }
-                    }
-                )
-            }
+                    ),
+                    value: Box::new(
+                        AST::EXPRESSION {
+                            token: Token {
+                                kind: TokenKind::IDENT,
+                                literal: "anotherVar".to_string()
+                            }
+                        }
+                    )
+                }
+            )
         ]
     };
 

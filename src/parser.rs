@@ -1,6 +1,19 @@
-use crate::ast:: { AST, Identifier };
+use crate::ast:: { AST };
 use crate::lexier:: { Lexier };
 use crate::token:: { TokenKind, Token};
+use crate::util::*;
+use std::collections::HashMap;
+
+
+pub enum PRECEDENCE {
+    LOWEST,
+    EQUALS,
+    LESSGREATER,
+    SUM,
+    PRODUCT,
+    PERFIX,
+    CALL,
+}
 
 #[derive(Debug, Clone)]
 pub struct Parser {
@@ -21,6 +34,7 @@ impl Parser {
                                       literal: "".to_string()},
                                   errors: Vec::new(),
         };
+
         parser.next_token();
         parser.next_token();
 
@@ -53,55 +67,58 @@ impl Parser {
         Some(program)
     }
 
-    fn parse_statement(&mut self) -> Option<AST>{
+    fn parse_statement(&mut self) -> Option<Box<AST>>{
         match self.cur_token.kind {
             TokenKind::LET => self.parse_let_statement(),
             TokenKind::RETURN => self.parse_return_statement(),
-            _ => None
+            _ => self.parse_expression_statement()
         }
     }
 
-    fn parse_let_statement(&mut self) -> Option<AST>{
+    fn parse_let_statement(&mut self) -> Option<Box<AST>>{
 
         if !self.expect_peek(TokenKind::IDENT) {
             return None
         }
         
-        let ident = Identifier {
+        let ident = Box::new(AST::IDENT {
             token: self.cur_token.clone(),
             value: self.cur_token.clone().literal,
-        };
+        });
 
         if !self.expect_peek(TokenKind::ASSIGN) {
             return None
         }
 
         // TODO: change statement value to valid expression
-        let value = AST::EXPRESSION {
+        let value = Box::new(AST::EXPRESSION {
             token: Token { kind: TokenKind::ILLEGAL, literal: "".to_string() }
-        };
-        
-        Some( AST::LET_STATEMENT {
+        });
+
+        while !self.cur_token_is(TokenKind::SEMICOLON) {
+            self.next_token();
+        }
+
+        Some( Box::new(AST::LET_STATEMENT {
             token: self.cur_token.clone(),
-            ident: Box::new(ident),
-            value: Box::new(value),
-        })
+            ident: ident,
+            value: value,
+        }))
     }
 
-    fn parse_return_statement(&mut self) -> Option<AST> {
+    fn parse_return_statement(&mut self) -> Option<Box<AST>> {
         // TODO: change return value to valid expression
-        let ret = AST::RETURN_STATEMENT {
+        let ret = Box::new(AST::RETURN_STATEMENT {
             token: self.cur_token.clone(),
-            return_value: Box::new(
-                AST::EXPRESSION {
-                    token: Token {
-                        kind: TokenKind::ILLEGAL,
-                        literal: "".to_string(),
-                    }
+            return_value:  Box::new(AST::EXPRESSION {
+                token: Token {
+                    kind: TokenKind::ILLEGAL,
+                    literal: "".to_string(),
                 }
-            )
-        };
-
+            })
+            
+        });
+        
         self.next_token();
 
         while !self.cur_token_is(TokenKind::SEMICOLON) {
@@ -111,6 +128,40 @@ impl Parser {
         Some(ret)
     }
 
+    fn parse_expression_statement(&mut self) -> Option<Box<AST>> {
+        let expression = self.parse_expression(PRECEDENCE::LOWEST);
+
+        let statement = Box::new(AST::EXPRESSION_STATEMENT {
+            token: self.cur_token.clone(),
+            expression: expression.unwrap(),
+        });
+
+        if self.peek_token_is(TokenKind::SEMICOLON) {
+            self.next_token();
+        }
+
+        Some(statement)
+    }
+
+    fn parse_expression (&mut self, prec: PRECEDENCE) -> Option<Box<AST>> {
+        let mut left_exp = Box::new(AST::EXPRESSION {
+            token : Token {
+                kind: TokenKind::ILLEGAL,
+                literal: "".to_string()
+            }
+        });
+        match self.cur_token.kind {
+            TokenKind::IDENT {..}  => left_exp = self.parse_identifier().unwrap(),
+            _ => (),
+        }
+        
+        Some(left_exp)
+    }
+
+    fn parse_identifier(&mut self) -> Option<Box<AST>> {
+        Some(Box::new(AST::IDENT { token: self.cur_token.clone(), value: self.cur_token.literal.clone() }))
+    }
+    
     fn cur_token_is(&mut self, kind: TokenKind) -> bool {
         self.cur_token.kind.clone() as u8  == kind as u8
     }
@@ -136,6 +187,7 @@ impl Parser {
 
         self.errors.push(msg);
     }
+
     
     pub fn check_parser_errors(&mut self) {
         if self.errors.len() == 0 {
@@ -153,6 +205,7 @@ impl Parser {
     
 }
 
+// --- test code ---
 
 #[test]
 fn test_let_statements() {
@@ -174,20 +227,22 @@ let foobar = 838383;\
             panic!("program does not contain 3 statements. got={}", statements.len()),
         _ => panic!("parse_program() returned None. ")
     }
-    
+
     let expected_let_statements = [  ( "x".to_string(), 5),
                                      ( "y".to_string(), 10),
                                      ( "foobar".to_string(), 838383)
     ];
 
     for (i, expected) in expected_let_statements.iter().enumerate() {
-        if let AST::PROGRAM { ref statements } = program {
-            if let AST::LET_STATEMENT { ref ident, ..}= statements[i] {
-                //: TODO check vallue of let statement
-                assert_eq!(ident.value, *expected.0);
+        if let AST::PROGRAM { ref mut statements } = program {
+            if let  AST::LET_STATEMENT { ref mut ident, .. } = unbox(statements[i].clone()) {
+                if let AST::IDENT { ref value, .. } = unbox(ident.clone()) {
+                    // TODO: check value bound in identifier
+                    assert_eq!(*value, expected.0);
+                }
             }
-        }
-    }    
+        }    
+    }
 }
 
 #[test]
@@ -218,7 +273,7 @@ return 993322;\
 
     for (i, expected) in expected_return_value.iter().enumerate() {
         if let AST::PROGRAM { ref statements } = program {
-            if let AST::RETURN_STATEMENT { ref token, .. } = statements[i] {
+            if let AST::RETURN_STATEMENT { ref token, .. } = unbox(statements[i].clone()) {
                 //: TODO check return value
                 assert_eq!(token.literal, "return");
             }
