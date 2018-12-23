@@ -18,5 +18,10 @@ pub enum AST {
         ident: Box<Identifier>,
         value: Box<AST>
     },
+
+    RETURN_STATEMENT {
+        token: Token,
+        return_value: Box<AST>
+    }
     
 }
