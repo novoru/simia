@@ -15,7 +15,7 @@ pub fn start() {
                     let token = lexier.next_token();
                     match token.kind {
                         TokenKind::EOF => break,
-                        _ => println!("{{ kind: {}, literal: '{}' }}", token.get_kind(), token.literal)
+                        _ => println!("{{ kind: {}, literal: '{}' }}", token.get_kind_literal(), token.literal)
                     }
                 }
             }

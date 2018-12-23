@@ -5,8 +5,9 @@ use crate::token:: { TokenKind, Token};
 #[derive(Debug, Clone)]
 pub struct Parser {
     pub lexier: Lexier,
-    pub cur_token: Token,
-    pub peek_token: Token,
+    cur_token: Token,
+    peek_token: Token,
+    errors: Vec<String>,
 }
 
 impl Parser {
@@ -18,6 +19,7 @@ impl Parser {
                                   peek_token: Token {
                                       kind: TokenKind::ILLEGAL,
                                       literal: "".to_string()},
+                                  errors: Vec::new(),
         };
         parser.next_token();
         parser.next_token();
@@ -36,7 +38,9 @@ impl Parser {
         while self.cur_token.kind.clone() as u8 != TokenKind::EOF.clone() as u8 {
             let statement = self.parse_statement();
 
-            if let None = statement {;}
+            if let None = statement {
+                ;
+            }
             else {
                 if let AST::PROGRAM { ref mut statements } = program {
                     statements.push(statement.unwrap());
@@ -51,7 +55,7 @@ impl Parser {
 
     fn parse_statement(&mut self) -> Option<AST>{
         match self.cur_token.kind {
-            TokenKind::LET => Some(self.parse_let_statement().unwrap()),
+            TokenKind::LET => self.parse_let_statement(),
             _ => None
         }
     }
@@ -95,9 +99,33 @@ impl Parser {
             self.next_token();
             return true;
         }
+        
+        self.peek_error(kind);
 
         false
     }
+
+    fn peek_error(&mut self, kind: TokenKind) {
+        let msg = format!("expeceted next token to be {}, got {} instead",
+                          kind.get_kind_literal(), self.peek_token.get_kind_literal() );
+
+        self.errors.push(msg);
+    }
+    
+    pub fn check_parser_errors(&mut self) {
+        if self.errors.len() == 0 {
+            return ();
+        }
+
+        println!("parser has {} errors", self.errors.len());
+        
+        for msg in self.errors.clone() {
+            println!("parser error: {}", msg);
+        }
+        
+        panic!();
+    }
+    
 }
 
 
@@ -113,7 +141,9 @@ let foobar = 838383;\
     let mut parser = Parser::new(lexier);
 
     let mut program = parser.parse_program().unwrap();
+    parser.check_parser_errors();
 
+    /*
     match program {
         AST::PROGRAM { ref statements } if statements.len() == 3 => (),
         AST::PROGRAM { ref statements } =>
@@ -134,5 +164,6 @@ let foobar = 838383;\
             }
         }
     }
+     */
     
 }

@@ -263,9 +263,9 @@ return false;\
     
     for test in tests.iter() {
         token = lexier.next_token();
-        //println!("input:\t{{ kind: {}, literal: {} }}", token.get_kind(), token.literal);
-        //println!("test:\t{{ kind: {}, literal: {} }}", test.get_kind(), test.literal);
-        if token.get_kind() != test.get_kind() {
+        //println!("input:\t{{ kind: {}, literal: {} }}", token.get_kind_literal(), token.literal);
+        //println!("test:\t{{ kind: {}, literal: {} }}", test.get_kind_literal(), test.literal);
+        if token.get_kind_literal() != test.get_kind_literal() {
             panic!("token.kind not equal test.kind.");
         }
     }
