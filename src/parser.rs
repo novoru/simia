@@ -1,7 +1,6 @@
 use crate::ast:: { AST };
 use crate::lexier:: { Lexier };
 use crate::token:: { TokenKind, Token};
-use crate::util::*;
 use std::collections::HashMap;
 
 
@@ -153,7 +152,8 @@ impl Parser {
         match self.cur_token.kind {
             TokenKind::IDENT {..}  => left_exp = self.parse_identifier().unwrap(),
             TokenKind::INT {..} => left_exp = self.parse_integer_literal().unwrap(),
-            _ => (),
+            TokenKind::BANG {..} | TokenKind::MINUS {..} => left_exp = self.parse_prefix_expression().unwrap(),
+            _ => self.parse_error(),
         }
         
         Some(left_exp)
@@ -163,11 +163,35 @@ impl Parser {
         Some(Box::new(AST::IDENT { token: self.cur_token.clone(), value: self.cur_token.literal.clone() }))
     }
 
-    fn parse_integer_literal(&mut self) ->Option<Box<AST>> {
+    fn parse_integer_literal(&mut self) -> Option<Box<AST>> {
         Some(Box::new(AST::INT_LITERAL {
             token: self.cur_token.clone(),
             value: self.cur_token.literal.clone().parse::<i64>().unwrap(),
         }))
+    }
+
+    fn parse_prefix_expression(&mut self) -> Option<Box<AST>>{
+        let mut expression = Box::new(AST::PREFIX_EXPRESSION {
+            token: self.cur_token.clone(),
+            operator: self.cur_token.clone().literal,
+            right: Box::new(
+                AST::EXPRESSION {
+                    token:
+                    Token {
+                        kind: TokenKind::ILLEGAL,
+                        literal: "".to_string(),
+                    }
+                }
+            ),
+        });
+
+        self.next_token();
+
+        if let AST::PREFIX_EXPRESSION { ref mut right, ..} = *expression {
+            *right = self.parse_expression(PRECEDENCE::PREFIX).unwrap()
+        }
+        
+        Some(expression)
     }
     
     fn cur_token_is(&mut self, kind: TokenKind) -> bool {
@@ -196,6 +220,10 @@ impl Parser {
         self.errors.push(msg);
     }
 
+    fn parse_error(&mut self) {
+        let msg = format!("no parse match pattern for {} found", self.cur_token.get_kind_literal());
+        self.errors.push(msg);
+    }
     
     pub fn check_parser_errors(&mut self) {
         if self.errors.len() == 0 {
@@ -243,8 +271,8 @@ let foobar = 838383;\
 
     for (i, expected) in expected_let_statements.iter().enumerate() {
         if let AST::PROGRAM { ref mut statements } = program {
-            if let  AST::LET_STATEMENT { ref mut ident, .. } = unbox(statements[i].clone()) {
-                if let AST::IDENT { ref value, .. } = unbox(ident.clone()) {
+            if let  AST::LET_STATEMENT { ref mut ident, .. } = *statements[i] {
+                if let AST::IDENT { ref value, .. } = **ident {
                     // TODO: check value bound in identifier
                     assert_eq!(*value, expected.0);
                 }
@@ -281,7 +309,7 @@ return 993322;\
 
     for (i, expected) in expected_return_value.iter().enumerate() {
         if let AST::PROGRAM { ref statements } = program {
-            if let AST::RETURN_STATEMENT { ref token, .. } = unbox(statements[i].clone()) {
+            if let AST::RETURN_STATEMENT { ref token, .. } = *statements[i] {
                 //: TODO check return value
                 assert_eq!(token.literal, "return");
             }
@@ -314,9 +342,43 @@ fn test_integer_literal() {
 
     for (i, expected) in expected_value.iter().enumerate() {
         if let AST::PROGRAM { ref statements } = program {
-            if let AST::INT_LITERAL { ref value, .. } = unbox(statements[i].clone()) {
+            if let AST::INT_LITERAL { ref value, .. } = *statements[i] {
                 assert_eq!(value, expected);
             }
         }
     }        
+}
+
+#[test]
+fn test_prefix_expression() {
+    let mut tests = [
+        ("!5".to_string(), "!", 5),
+        ("-15".to_string(), "-", 15)
+    ];
+
+    for (i, test) in tests.iter().enumerate() {
+
+        let mut lexier = Lexier::new(test.clone().0);
+        let mut parser = Parser::new(lexier);
+
+        let mut program = parser.parse_program().unwrap();
+        parser.check_parser_errors();
+
+        match program {
+            AST::PROGRAM { ref statements } if statements.len() == 1 => (),
+            AST::PROGRAM { ref statements } =>
+                panic!("program does not contain 1 statements. got={}", statements.len()),
+            _ => panic!("parse_program() returned None. ")
+        }
+               
+        if let AST::PROGRAM { ref statements } = program {
+            if let AST::EXPRESSION_STATEMENT { ref expression, .. } = *statements[0] {
+                if let AST::PREFIX_EXPRESSION { ref operator, ref right, ..} = **expression {
+                    assert_eq!(operator, test.1);
+                    assert_eq!(right.to_string(), test.2.to_string());
+                }
+            }
+        }        
+
+    }
 }
