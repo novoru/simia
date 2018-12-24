@@ -28,6 +28,11 @@ pub enum AST {
         token: Token,
         expression: Box<AST>,
     },
+
+    INT_LITERAL {
+        token: Token,
+        value: i64,
+    },
     
 }
 
@@ -54,6 +59,9 @@ impl AST {
                 string = format!("{}", expression.to_string());
             },
             AST::EXPRESSION { token } => {
+                string = format!("{}", token.literal);
+            },
+            AST::INT_LITERAL { token,.. } => {
                 string = format!("{}", token.literal);
             },
             _ => string = "".to_string(),

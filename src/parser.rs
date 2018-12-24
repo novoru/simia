@@ -11,7 +11,7 @@ pub enum PRECEDENCE {
     LESSGREATER,
     SUM,
     PRODUCT,
-    PERFIX,
+    PREFIX,
     CALL,
 }
 
@@ -152,6 +152,7 @@ impl Parser {
         });
         match self.cur_token.kind {
             TokenKind::IDENT {..}  => left_exp = self.parse_identifier().unwrap(),
+            TokenKind::INT {..} => left_exp = self.parse_integer_literal().unwrap(),
             _ => (),
         }
         
@@ -160,6 +161,13 @@ impl Parser {
 
     fn parse_identifier(&mut self) -> Option<Box<AST>> {
         Some(Box::new(AST::IDENT { token: self.cur_token.clone(), value: self.cur_token.literal.clone() }))
+    }
+
+    fn parse_integer_literal(&mut self) ->Option<Box<AST>> {
+        Some(Box::new(AST::INT_LITERAL {
+            token: self.cur_token.clone(),
+            value: self.cur_token.literal.clone().parse::<i64>().unwrap(),
+        }))
     }
     
     fn cur_token_is(&mut self, kind: TokenKind) -> bool {
@@ -276,6 +284,38 @@ return 993322;\
             if let AST::RETURN_STATEMENT { ref token, .. } = unbox(statements[i].clone()) {
                 //: TODO check return value
                 assert_eq!(token.literal, "return");
+            }
+        }
+    }        
+}
+
+#[test]
+fn test_integer_literal() {
+    let input = "5;\
+12345;\
+".to_string();
+
+    let mut lexier = Lexier::new(input);
+    let mut parser = Parser::new(lexier);
+
+    let mut program = parser.parse_program().unwrap();
+    parser.check_parser_errors();
+
+    match program {
+        AST::PROGRAM { ref statements } if statements.len() == 2 => (),
+        AST::PROGRAM { ref statements } =>
+            panic!("program does not contain 2 statements. got={}", statements.len()),
+        _ => panic!("parse_program() returned None. ")
+    }
+    
+    let expected_value = [ 5,
+                          12345
+    ];
+
+    for (i, expected) in expected_value.iter().enumerate() {
+        if let AST::PROGRAM { ref statements } = program {
+            if let AST::INT_LITERAL { ref value, .. } = unbox(statements[i].clone()) {
+                assert_eq!(value, expected);
             }
         }
     }        
