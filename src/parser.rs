@@ -221,7 +221,7 @@ impl Parser {
     }
 
     fn parse_error(&mut self) {
-        let msg = format!("no parse match pattern for {} found", self.cur_token.get_kind_literal());
+        let msg = format!("there is no matching pattern for {} found", self.cur_token.get_kind_literal());
         self.errors.push(msg);
     }
     
