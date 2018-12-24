@@ -1,9 +1,9 @@
 use crate::ast:: { AST };
 use crate::lexier:: { Lexier };
 use crate::token:: { TokenKind, Token};
-use std::collections::HashMap;
 
 
+#[derive(Debug, Clone)]
 pub enum PRECEDENCE {
     LOWEST,
     EQUALS,
@@ -12,6 +12,20 @@ pub enum PRECEDENCE {
     PRODUCT,
     PREFIX,
     CALL,
+}
+
+pub fn precedences (kind: TokenKind) -> PRECEDENCE {
+    match kind {
+        TokenKind::EQ       => PRECEDENCE::EQUALS,
+        TokenKind::NOT_EQ   => PRECEDENCE::EQUALS,
+        TokenKind::LT       => PRECEDENCE::LESSGREATER,
+        TokenKind::GT       => PRECEDENCE::LESSGREATER,
+        TokenKind::PLUS     => PRECEDENCE::SUM,
+        TokenKind::MINUS    => PRECEDENCE::SUM,
+        TokenKind::SLASH    => PRECEDENCE::PRODUCT,
+        TokenKind::ASTERISK => PRECEDENCE::PRODUCT,
+        _                   => PRECEDENCE::LOWEST
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -142,18 +156,39 @@ impl Parser {
         Some(statement)
     }
 
-    fn parse_expression (&mut self, prec: PRECEDENCE) -> Option<Box<AST>> {
+    fn parse_expression (&mut self, precedence: PRECEDENCE) -> Option<Box<AST>> {
         let mut left_exp = Box::new(AST::EXPRESSION {
             token : Token {
                 kind: TokenKind::ILLEGAL,
                 literal: "".to_string()
             }
         });
+        
         match self.cur_token.kind {
-            TokenKind::IDENT {..}  => left_exp = self.parse_identifier().unwrap(),
-            TokenKind::INT {..} => left_exp = self.parse_integer_literal().unwrap(),
-            TokenKind::BANG {..} | TokenKind::MINUS {..} => left_exp = self.parse_prefix_expression().unwrap(),
-            _ => self.parse_error(),
+            TokenKind::IDENT    {..}  => left_exp = self.parse_identifier().unwrap(),
+            TokenKind::INT      {..}  => left_exp = self.parse_integer_literal().unwrap(),
+            TokenKind::BANG     {..} |
+            TokenKind::MINUS    {..}  => left_exp = self.parse_prefix_expression().unwrap(),
+            _ => (),
+        }
+
+        while !self.peek_token_is(TokenKind::SEMICOLON) && (precedence.clone() as u8) < (self.peek_precedence() as u8) {
+            match self.peek_token.kind {
+                TokenKind::PLUS     {..} |
+                TokenKind::MINUS    {..} |
+                TokenKind::SLASH    {..} |
+                TokenKind::ASTERISK {..} |
+                TokenKind::EQ       {..} |
+                TokenKind::NOT_EQ   {..} |
+                TokenKind::LT       {..} |
+                TokenKind::GT       {..} => {
+                    self.next_token();
+                    left_exp = self.parse_infix_expression(left_exp).unwrap();
+                },
+                _ => return Some(left_exp),
+                
+            }
+
         }
         
         Some(left_exp)
@@ -193,6 +228,32 @@ impl Parser {
         
         Some(expression)
     }
+
+    fn parse_infix_expression(&mut self, left: Box<AST>) -> Option<Box<AST>>{
+        let mut expression = Box::new(AST::INFIX_EXPRESSION {
+            token: self.cur_token.clone(),
+            left: left.clone(),
+            operator: self.cur_token.literal.clone(),
+            right: Box::new(
+                AST::EXPRESSION {
+                    token:
+                    Token {
+                        kind: TokenKind::ILLEGAL,
+                        literal: "".to_string(),
+                    }
+                }
+            ),
+        });
+
+        let precedence = self.cur_precedence();
+        self.next_token();
+        if let AST::INFIX_EXPRESSION { ref mut right, ..} = *expression {
+            *right = self.parse_expression(precedence).unwrap();
+        }
+
+        Some(expression)
+        
+    }
     
     fn cur_token_is(&mut self, kind: TokenKind) -> bool {
         self.cur_token.kind.clone() as u8  == kind as u8
@@ -213,6 +274,14 @@ impl Parser {
         false
     }
 
+    fn cur_precedence(&mut self) -> PRECEDENCE {
+        precedences(self.cur_token.kind)
+    }
+    
+    fn peek_precedence(&mut self) -> PRECEDENCE {
+        precedences(self.peek_token.kind)
+    }
+    
     fn peek_error(&mut self, kind: TokenKind) {
         let msg = format!("expeceted next token to be {}, got {} instead",
                           kind.get_kind_literal(), self.peek_token.get_kind_literal() );
@@ -251,7 +320,7 @@ let y = 10;\
 let foobar = 838383;\
 ".to_string();
 
-    let mut lexier = Lexier::new(input);
+    let lexier = Lexier::new(input);
     let mut parser = Parser::new(lexier);
 
     let mut program = parser.parse_program().unwrap();
@@ -289,10 +358,10 @@ return 10;\
 return 993322;\
 ".to_string();
 
-    let mut lexier = Lexier::new(input);
+    let lexier = Lexier::new(input);
     let mut parser = Parser::new(lexier);
 
-    let mut program = parser.parse_program().unwrap();
+    let program = parser.parse_program().unwrap();
     parser.check_parser_errors();
 
     match program {
@@ -307,7 +376,7 @@ return 993322;\
                                   (838383)
     ];
 
-    for (i, expected) in expected_return_value.iter().enumerate() {
+    for (i, _) in expected_return_value.iter().enumerate() {
         if let AST::PROGRAM { ref statements } = program {
             if let AST::RETURN_STATEMENT { ref token, .. } = *statements[i] {
                 //: TODO check return value
@@ -323,10 +392,10 @@ fn test_integer_literal() {
 12345;\
 ".to_string();
 
-    let mut lexier = Lexier::new(input);
+    let lexier = Lexier::new(input);
     let mut parser = Parser::new(lexier);
 
-    let mut program = parser.parse_program().unwrap();
+    let program = parser.parse_program().unwrap();
     parser.check_parser_errors();
 
     match program {
@@ -351,17 +420,17 @@ fn test_integer_literal() {
 
 #[test]
 fn test_prefix_expression() {
-    let mut tests = [
+    let tests = [
         ("!5".to_string(), "!", 5),
         ("-15".to_string(), "-", 15)
     ];
 
-    for (i, test) in tests.iter().enumerate() {
+    for (_i, test) in tests.iter().enumerate() {
 
-        let mut lexier = Lexier::new(test.clone().0);
+        let lexier = Lexier::new(test.clone().0);
         let mut parser = Parser::new(lexier);
 
-        let mut program = parser.parse_program().unwrap();
+        let program = parser.parse_program().unwrap();
         parser.check_parser_errors();
 
         match program {
@@ -376,6 +445,47 @@ fn test_prefix_expression() {
                 if let AST::PREFIX_EXPRESSION { ref operator, ref right, ..} = **expression {
                     assert_eq!(operator, test.1);
                     assert_eq!(right.to_string(), test.2.to_string());
+                }
+            }
+        }        
+
+    }
+}
+
+#[test]
+fn test_infix_expression() {
+    let tests = [
+        ("5 + 5;", 5, "+", 5),
+        ("5 - 5;", 5, "-", 5),
+        ("5 * 5;", 5, "*", 5),
+        ("5 / 5;", 5, "/", 5),
+        ("5 > 5;", 5, ">", 5),
+        ("5 < 5;", 5, "<", 5),
+        ("5 == 5;", 5, "==", 5),
+        ("5 != 5;", 5, "!=", 5)
+    ];
+
+    for (_i, test) in tests.iter().enumerate() {
+
+        let lexier = Lexier::new((*test.clone().0).to_string());
+        let mut parser = Parser::new(lexier);
+
+        let program = parser.parse_program().unwrap();
+        parser.check_parser_errors();
+
+        match program {
+            AST::PROGRAM { ref statements } if statements.len() == 1 => (),
+            AST::PROGRAM { ref statements } =>
+                panic!("program does not contain 1 statements. got={}", statements.len()),
+            _ => panic!("parse_program() returned None. ")
+        }
+               
+        if let AST::PROGRAM { ref statements } = program {
+            if let AST::EXPRESSION_STATEMENT { ref expression, .. } = *statements[0] {
+                if let AST::INFIX_EXPRESSION { ref left, ref operator, ref right, ..} = **expression {
+                    assert_eq!(left.to_string(), test.1.to_string());
+                    assert_eq!(*operator, test.2.to_string());
+                    assert_eq!(right.to_string(), test.3.to_string());
                 }
             }
         }        

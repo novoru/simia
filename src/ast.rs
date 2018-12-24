@@ -39,6 +39,13 @@ pub enum AST {
         operator: String,
         right: Box<AST>,
     },
+
+    INFIX_EXPRESSION {
+        token: Token,
+        left: Box<AST>,
+        operator: String,
+        right: Box<AST>,
+    },
     
 }
 
@@ -51,7 +58,7 @@ impl AST {
                     string = format!("{}{}", string, statement.to_string() );
                 }
             },
-            AST::IDENT { token, value } => {
+            AST::IDENT { value, .. } => {
                 string = format!("{}", value);
             },
             AST::LET_STATEMENT {token, ident, value} => {
@@ -73,7 +80,9 @@ impl AST {
             AST::PREFIX_EXPRESSION { operator, right, ..} => {
                 string = format!("({}{})", operator, right.to_string());
             },
-            _ => string = "".to_string(),
+            AST::INFIX_EXPRESSION { left, operator, right, .. } => {
+                string = format!("({} {} {})", left.to_string(), operator, right.to_string());
+            }
         }
 
         string
@@ -88,7 +97,8 @@ impl AST {
             AST::EXPRESSION_STATEMENT {..} => "EXPRESSION_STATEMENT".to_string(),
             AST::EXPRESSION {..} => "EXPRESSION".to_string(),
             AST::INT_LITERAL {..} => "INT_LITERAL".to_string(),
-            AST::PREFIX_EXPRESSION {..} => "PREFIX_EXPRESSION".to_string()
+            AST::PREFIX_EXPRESSION {..} => "PREFIX_EXPRESSION".to_string(),
+            AST::INFIX_EXPRESSION {..} => "INFIX_EXPRESSION".to_string()
         }
     }
     
