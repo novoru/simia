@@ -63,14 +63,14 @@ impl Parser {
         let mut program = AST::PROGRAM { statements: Vec::new() };
         
         while self.cur_token.kind.clone() as u8 != TokenKind::EOF.clone() as u8 {
-            let statement = self.parse_statement();
+            let statement = Box::new(self.parse_statement());
 
-            if let None = statement {
+            if let None = *statement {
                 ;
             }
             else {
                 if let AST::PROGRAM { ref mut statements } = program {
-                    statements.push(statement.unwrap());
+                    statements.push(Box::new(statement.unwrap()));
                 }
             }
 
@@ -80,15 +80,15 @@ impl Parser {
         Some(program)
     }
 
-    fn parse_statement(&mut self) -> Option<Box<AST>>{
+    fn parse_statement(&mut self) -> Option<AST>{
         match self.cur_token.kind {
-            TokenKind::LET => self.parse_let_statement(),
-            TokenKind::RETURN => self.parse_return_statement(),
-            _ => self.parse_expression_statement()
+            TokenKind::LET    => Some(self.parse_let_statement().unwrap()),
+            TokenKind::RETURN => Some(self.parse_return_statement().unwrap()),
+            _ => Some(self.parse_expression_statement().unwrap())
         }
     }
 
-    fn parse_let_statement(&mut self) -> Option<Box<AST>>{
+    fn parse_let_statement(&mut self) -> Option<AST>{
 
         if !self.expect_peek(TokenKind::IDENT) {
             return None
@@ -112,16 +112,16 @@ impl Parser {
             self.next_token();
         }
 
-        Some( Box::new(AST::LET_STATEMENT {
+        Some( AST::LET_STATEMENT {
             token: self.cur_token.clone(),
             ident: ident,
             value: value,
-        }))
+        })
     }
 
-    fn parse_return_statement(&mut self) -> Option<Box<AST>> {
+    fn parse_return_statement(&mut self) -> Option<AST> {
         // TODO: change return value to valid expression
-        let ret = Box::new(AST::RETURN_STATEMENT {
+        let ret = AST::RETURN_STATEMENT {
             token: self.cur_token.clone(),
             return_value:  Box::new(AST::EXPRESSION {
                 token: Token {
@@ -129,11 +129,9 @@ impl Parser {
                     literal: "".to_string(),
                 }
             })
-            
-        });
-        
+        };
         self.next_token();
-
+        
         while !self.cur_token_is(TokenKind::SEMICOLON) {
             self.next_token();
         }
@@ -141,13 +139,13 @@ impl Parser {
         Some(ret)
     }
 
-    fn parse_expression_statement(&mut self) -> Option<Box<AST>> {
+    fn parse_expression_statement(&mut self) -> Option<AST> {
         let expression = self.parse_expression(PRECEDENCE::LOWEST);
 
-        let statement = Box::new(AST::EXPRESSION_STATEMENT {
+        let statement = AST::EXPRESSION_STATEMENT {
             token: self.cur_token.clone(),
-            expression: expression.unwrap(),
-        });
+            expression: Box::new(expression.unwrap()),
+        };
 
         if self.peek_token_is(TokenKind::SEMICOLON) {
             self.next_token();
@@ -156,13 +154,13 @@ impl Parser {
         Some(statement)
     }
 
-    fn parse_expression (&mut self, precedence: PRECEDENCE) -> Option<Box<AST>> {
-        let mut left_exp = Box::new(AST::EXPRESSION {
+    fn parse_expression (&mut self, precedence: PRECEDENCE) -> Option<AST> {
+        let mut left_exp = AST::EXPRESSION {
             token : Token {
                 kind: TokenKind::ILLEGAL,
                 literal: "".to_string()
             }
-        });
+        };
         
         match self.cur_token.kind {
             TokenKind::IDENT    {..}  => left_exp = self.parse_identifier().unwrap(),
@@ -183,7 +181,7 @@ impl Parser {
                 TokenKind::LT       {..} |
                 TokenKind::GT       {..} => {
                     self.next_token();
-                    left_exp = self.parse_infix_expression(left_exp).unwrap();
+                    left_exp = self.parse_infix_expression(Box::new(left_exp)).unwrap();
                 },
                 _ => return Some(left_exp),
                 
@@ -194,19 +192,19 @@ impl Parser {
         Some(left_exp)
     }
 
-    fn parse_identifier(&mut self) -> Option<Box<AST>> {
-        Some(Box::new(AST::IDENT { token: self.cur_token.clone(), value: self.cur_token.literal.clone() }))
+    fn parse_identifier(&mut self) -> Option<AST> {
+        Some(AST::IDENT { token: self.cur_token.clone(), value: self.cur_token.literal.clone() })
     }
 
-    fn parse_integer_literal(&mut self) -> Option<Box<AST>> {
-        Some(Box::new(AST::INT_LITERAL {
+    fn parse_integer_literal(&mut self) -> Option<AST> {
+        Some(AST::INT_LITERAL {
             token: self.cur_token.clone(),
             value: self.cur_token.literal.clone().parse::<i64>().unwrap(),
-        }))
+        })
     }
 
-    fn parse_prefix_expression(&mut self) -> Option<Box<AST>>{
-        let mut expression = Box::new(AST::PREFIX_EXPRESSION {
+    fn parse_prefix_expression(&mut self) -> Option<AST>{
+        let mut expression = AST::PREFIX_EXPRESSION {
             token: self.cur_token.clone(),
             operator: self.cur_token.clone().literal,
             right: Box::new(
@@ -218,19 +216,19 @@ impl Parser {
                     }
                 }
             ),
-        });
+        };
 
         self.next_token();
 
-        if let AST::PREFIX_EXPRESSION { ref mut right, ..} = *expression {
-            *right = self.parse_expression(PRECEDENCE::PREFIX).unwrap()
+        if let AST::PREFIX_EXPRESSION { ref mut right, ..} = expression {
+            *right = Box::new(self.parse_expression(PRECEDENCE::PREFIX).unwrap())
         }
         
         Some(expression)
     }
 
-    fn parse_infix_expression(&mut self, left: Box<AST>) -> Option<Box<AST>>{
-        let mut expression = Box::new(AST::INFIX_EXPRESSION {
+    fn parse_infix_expression(&mut self, left: Box<AST>) -> Option<AST>{
+        let mut expression = AST::INFIX_EXPRESSION {
             token: self.cur_token.clone(),
             left: left.clone(),
             operator: self.cur_token.literal.clone(),
@@ -243,12 +241,12 @@ impl Parser {
                     }
                 }
             ),
-        });
+        };
 
         let precedence = self.cur_precedence();
         self.next_token();
-        if let AST::INFIX_EXPRESSION { ref mut right, ..} = *expression {
-            *right = self.parse_expression(precedence).unwrap();
+        if let AST::INFIX_EXPRESSION { ref mut right, ..} = expression {
+            *right = Box::new(self.parse_expression(precedence).unwrap());
         }
 
         Some(expression)
