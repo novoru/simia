@@ -163,10 +163,12 @@ impl Parser {
         };
         
         match self.cur_token.kind {
-            TokenKind::IDENT    {..}  => left_exp = self.parse_identifier().unwrap(),
-            TokenKind::INT      {..}  => left_exp = self.parse_integer_literal().unwrap(),
-            TokenKind::BANG     {..} |
-            TokenKind::MINUS    {..}  => left_exp = self.parse_prefix_expression().unwrap(),
+            TokenKind::IDENT  {..}  => left_exp = self.parse_identifier().unwrap(),
+            TokenKind::INT    {..}  => left_exp = self.parse_integer_literal().unwrap(),
+            TokenKind::BANG   {..} |
+            TokenKind::MINUS  {..}  => left_exp = self.parse_prefix_expression().unwrap(),
+            TokenKind::TRUE   {..} |
+            TokenKind::FALSE  {..}  => left_exp = self.parse_boolean().unwrap(),
             _ => (),
         }
 
@@ -251,6 +253,13 @@ impl Parser {
 
         Some(expression)
         
+    }
+
+    fn parse_boolean(&mut self) -> Option<AST> {
+        Some(AST::BOOLEAN {
+            token: self.cur_token.clone(),
+            value: self.cur_token_is(TokenKind::TRUE),
+        })
     }
     
     fn cur_token_is(&mut self, kind: TokenKind) -> bool {
@@ -505,7 +514,11 @@ fn test_operator_precedence_parsing() {
         ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"),
         ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
         ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
-        ("3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))")
+        ("3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"),
+        ("true", "true"),
+        ("false", "false"),
+        ("3 > 5 == false", "((3 > 5) == false)"),
+        ("3 < 5 == true", "((3 < 5) == true)")
     ];
 
     for (_i, test) in tests.iter().enumerate() {
