@@ -169,6 +169,7 @@ impl Parser {
             TokenKind::MINUS  {..}  => left_exp = self.parse_prefix_expression().unwrap(),
             TokenKind::TRUE   {..} |
             TokenKind::FALSE  {..}  => left_exp = self.parse_boolean().unwrap(),
+            TokenKind::LPAREN {..}  => left_exp = self.parse_grouped_expression().unwrap(),
             _ => (),
         }
 
@@ -261,6 +262,17 @@ impl Parser {
             value: self.cur_token_is(TokenKind::TRUE),
         })
     }
+
+    fn parse_grouped_expression(&mut self) -> Option<AST> {
+        self.next_token();
+        let expression = self.parse_expression(PRECEDENCE::LOWEST).unwrap();
+
+        if !self.expect_peek(TokenKind::RPAREN) {
+            return None;
+        }
+
+        Some(expression)
+    }
     
     fn cur_token_is(&mut self, kind: TokenKind) -> bool {
         self.cur_token.kind.clone() as u8  == kind as u8
@@ -317,15 +329,13 @@ impl Parser {
     
 }
 
-// --- test code ---
-
 #[test]
 fn test_let_statements() {
     let input = "\
-let x = 5;\
-let y = 10;\
-let foobar = 838383;\
-".to_string();
+    let x = 5;\
+    let y = 10;\
+    let foobar = 838383;\
+    ".to_string();
 
     let lexier = Lexier::new(input);
     let mut parser = Parser::new(lexier);
@@ -341,8 +351,8 @@ let foobar = 838383;\
     }
 
     let expected_let_statements = [  ( "x".to_string(), 5),
-                                     ( "y".to_string(), 10),
-                                     ( "foobar".to_string(), 838383)
+                                        ( "y".to_string(), 10),
+                                        ( "foobar".to_string(), 838383)
     ];
 
     for (i, expected) in expected_let_statements.iter().enumerate() {
@@ -360,10 +370,10 @@ let foobar = 838383;\
 #[test]
 fn test_return_statement() {
     let input = "\
-return  5;\
-return 10;\
-return 993322;\
-".to_string();
+    return  5;\
+    return 10;\
+    return 993322;\
+    ".to_string();
 
     let lexier = Lexier::new(input);
     let mut parser = Parser::new(lexier);
@@ -379,8 +389,8 @@ return 993322;\
     }
     
     let expected_return_value = [ (5),
-                                  (10),
-                                  (838383)
+                                   (10),
+                                   (838383)
     ];
 
     for (i, _) in expected_return_value.iter().enumerate() {
@@ -394,10 +404,10 @@ return 993322;\
 }
 
 #[test]
-fn test_integer_literal() {
+fn test_integer_literal_expression() {
     let input = "5;\
-12345;\
-".to_string();
+                 12345;\
+                 ".to_string();
 
     let lexier = Lexier::new(input);
     let mut parser = Parser::new(lexier);
@@ -413,7 +423,7 @@ fn test_integer_literal() {
     }
     
     let expected_value = [ 5,
-                          12345
+                           12345
     ];
 
     for (i, expected) in expected_value.iter().enumerate() {
@@ -446,53 +456,12 @@ fn test_prefix_expression() {
                 panic!("program does not contain 1 statements. got={}", statements.len()),
             _ => panic!("parse_program() returned None. ")
         }
-               
+        
         if let AST::PROGRAM { ref statements } = program {
             if let AST::EXPRESSION_STATEMENT { ref expression, .. } = *statements[0] {
                 if let AST::PREFIX_EXPRESSION { ref operator, ref right, ..} = **expression {
                     assert_eq!(operator, test.1);
                     assert_eq!(right.to_string(), test.2.to_string());
-                }
-            }
-        }        
-
-    }
-}
-
-#[test]
-fn test_infix_expression() {
-    let tests = [
-        ("5 + 5;", 5, "+", 5),
-        ("5 - 5;", 5, "-", 5),
-        ("5 * 5;", 5, "*", 5),
-        ("5 / 5;", 5, "/", 5),
-        ("5 > 5;", 5, ">", 5),
-        ("5 < 5;", 5, "<", 5),
-        ("5 == 5;", 5, "==", 5),
-        ("5 != 5;", 5, "!=", 5)
-    ];
-
-    for (_i, test) in tests.iter().enumerate() {
-
-        let lexier = Lexier::new((*test.clone().0).to_string());
-        let mut parser = Parser::new(lexier);
-
-        let program = parser.parse_program().unwrap();
-        parser.check_parser_errors();
-
-        match program {
-            AST::PROGRAM { ref statements } if statements.len() == 1 => (),
-            AST::PROGRAM { ref statements } =>
-                panic!("program does not contain 1 statements. got={}", statements.len()),
-            _ => panic!("parse_program() returned None. ")
-        }
-               
-        if let AST::PROGRAM { ref statements } = program {
-            if let AST::EXPRESSION_STATEMENT { ref expression, .. } = *statements[0] {
-                if let AST::INFIX_EXPRESSION { ref left, ref operator, ref right, ..} = **expression {
-                    assert_eq!(left.to_string(), test.1.to_string());
-                    assert_eq!(*operator, test.2.to_string());
-                    assert_eq!(right.to_string(), test.3.to_string());
                 }
             }
         }        
@@ -518,7 +487,12 @@ fn test_operator_precedence_parsing() {
         ("true", "true"),
         ("false", "false"),
         ("3 > 5 == false", "((3 > 5) == false)"),
-        ("3 < 5 == true", "((3 < 5) == true)")
+        ("3 < 5 == true", "((3 < 5) == true)"),
+        ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
+        ("(5 + 5) * 2", "((5 + 5) * 2)"),
+        ("2 / (5 + 5)", "(2 / (5 + 5))"),
+        ("-(5 + 5)", "(-(5 + 5))"),
+        ("!(true == true)", "(!(true == true))")
     ];
 
     for (_i, test) in tests.iter().enumerate() {
@@ -528,10 +502,185 @@ fn test_operator_precedence_parsing() {
 
         let program = parser.parse_program().unwrap();
         parser.check_parser_errors();
-               
+        
         if let AST::PROGRAM { .. } = program {
             assert_eq!(program.to_string(), (*test.clone().1).to_string());
         }        
 
+    }
+}
+    
+
+
+#[cfg(test)]
+pub mod tests {
+    use crate::ast:: { AST };
+    use crate::lexier:: { Lexier };
+    use crate::token:: { TokenKind, Token};
+    use crate::parser:: { Parser };
+    
+    #[derive(Clone)]
+    enum Type {
+        INT(i64),
+        STRING(String),
+        BOOLEAN(bool),
+    }
+
+    fn test_boolean_literal(exp: AST, expected: bool) -> bool {
+        match exp {
+            AST::BOOLEAN {..} => (),
+            _ => {
+                println!("exp not AST::BOOLEAN. got={}", exp.get_kind_literal());
+                return false;
+            }
+        }
+
+        if let AST::BOOLEAN { token, value,..} = exp {
+            if value != expected {
+                println!("exp.value not {}. got={}", expected, value);
+                return false;
+            }
+
+            if token.literal != expected.to_string() {
+                println!("exp.token.literal not {}. got={}", expected, token.literal);
+                return false;
+            }
+            
+        }
+
+        
+        true
+    }
+    
+    fn test_integer_literal(exp: AST, expected: i64) ->bool {
+        match exp {
+            AST::INT_LITERAL {..} => (),
+            _        => {
+                println!("exp not AST::INT_LITERAL. got={}", exp.get_kind_literal());
+                return false;
+            }
+        }
+
+        if let AST::INT_LITERAL { token, value,..} = exp {
+            if value != expected {
+                println!("exp.value not {}. got={}", expected, value);
+                return false;
+            }
+
+            if token.literal != expected.to_string() {
+                println!("exp.token.literal not {}. got={}", expected, token.literal);
+                return false;
+            }
+            
+        }
+
+        true
+
+
+    }
+    
+    fn test_identifier(exp: AST, expected: String) -> bool {
+        match exp {
+            AST::IDENT {..} => (),
+            _ => {
+                println!("exp not AST::IDENT. got={}", exp.get_kind_literal());
+                return false;
+            }
+        }
+
+        if let AST::IDENT { token, value,..} = exp {
+            if value != expected {
+                println!("exp.value not {}. got={}", expected, value);
+                return false;
+            }
+
+            if token.literal != expected {
+                println!("exp.token.literal not {}. got={}", expected, token.literal);
+                return false;
+            }
+            
+        }
+
+        true
+    }
+
+    fn test_literal_expression(exp: AST, expected: Type) -> bool {
+        match expected {
+            Type::INT(value)     => test_integer_literal(exp, value),
+            Type::STRING(value)  => test_identifier(exp, value),
+            Type::BOOLEAN(value) => test_boolean_literal(exp, value),
+            _ => {
+                println!("type of exp not handled.");
+                return false;
+            }
+        }
+    }
+
+    fn test_infix_expression(exp: AST, left: Type, operator: String, right: Type) -> bool {
+        match exp {
+            AST::INFIX_EXPRESSION {..} => (),
+            _  => {
+                println!("exp not AST::INFIX_EXPRESSION. got={}", exp.get_kind_literal());
+                return false;
+            }
+        }
+
+        if let AST::INFIX_EXPRESSION { left: lval, operator: op, right: rval, ..} = exp {
+            if !test_literal_expression(*lval, left) {
+                return false;
+            }
+            
+            if op != operator {
+                println!("operator is not {}. got={}", operator, op);
+                return false;
+            }
+            
+            if !test_literal_expression(*rval, right) {
+                return false;
+            }
+        }
+        
+        true
+    }
+
+    #[test]
+    fn test_parsing_infix_expression() {
+    let tests = [
+        ("5 + 5;", Type::INT(5), "+", Type::INT(5)),
+        ("5 - 5;", Type::INT(5), "-", Type::INT(5)),
+        ("5 * 5;", Type::INT(5), "*", Type::INT(5)),
+        ("5 / 5;", Type::INT(5), "/", Type::INT(5)),
+        ("5 > 5;", Type::INT(5), ">", Type::INT(5)),
+        ("5 < 5;", Type::INT(5), "<", Type::INT(5)),
+        ("5 == 5;", Type::INT(5), "==", Type::INT(5)),
+        ("5 != 5;", Type::INT(5), "!=", Type::INT(5)),
+        ("true == true;", Type::BOOLEAN(true), "==", Type::BOOLEAN(true)),
+        ("true != false;", Type::BOOLEAN(true), "!=", Type::BOOLEAN(false)),
+        ("false == false;", Type::BOOLEAN(false), "==", Type::BOOLEAN(false))
+    ];
+
+    for (_i, test) in tests.iter().enumerate() {
+
+        let lexier = Lexier::new((*test.clone().0).to_string());
+        let mut parser = Parser::new(lexier);
+
+        let program = parser.parse_program().unwrap();
+        parser.check_parser_errors();
+
+        match program {
+            AST::PROGRAM { ref statements } if statements.len() == 1 => (),
+            AST::PROGRAM { ref statements } =>
+                panic!("program does not contain 1 statements. got={}", statements.len()),
+            _ => panic!("parse_program() returned None. ")
+        }
+        
+        if let AST::PROGRAM { ref statements } = program {
+            if let AST::EXPRESSION_STATEMENT { ref expression, .. } = *statements[0] {
+                if !test_infix_expression(*expression.clone(), test.1.clone(), test.2.to_string(), test.3.clone()) {
+                    panic!("");
+                }
+            }
+        }        
+    }    
     }
 }
