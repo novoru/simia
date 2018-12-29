@@ -170,6 +170,7 @@ impl Parser {
             TokenKind::TRUE   {..} |
             TokenKind::FALSE  {..}  => left_exp = self.parse_boolean().unwrap(),
             TokenKind::LPAREN {..}  => left_exp = self.parse_grouped_expression().unwrap(),
+            TokenKind::IF     {..}  => left_exp = self.parse_if_expression().unwrap(),
             _ => (),
         }
 
@@ -272,6 +273,84 @@ impl Parser {
         }
 
         Some(expression)
+    }
+
+    fn parse_if_expression(&mut self) -> Option<AST> {
+        let empty_expression = AST::EXPRESSION {
+            token:
+            Token {
+                kind: TokenKind::ILLEGAL,
+                literal: "".to_string(),
+            }
+        };
+        let mut expression = AST::IF_EXPRESSION {
+            token: self.cur_token.clone(),
+            condition: Box::new(empty_expression.clone()),
+            consequence: Box::new(empty_expression.clone()),
+            alternative: Box::new(empty_expression.clone()),
+        };
+
+        if !self.expect_peek(TokenKind::LPAREN) {
+            return None;
+        }
+
+        self.next_token();
+
+        if let AST::IF_EXPRESSION { ref mut condition, .. } = expression {
+            *condition = Box::new(self.parse_expression(PRECEDENCE::LOWEST).unwrap());
+        };
+
+        if !self.expect_peek(TokenKind::RPAREN) {
+            return None;
+        }
+
+        if !self.expect_peek(TokenKind::LBRACE) {
+            return None;
+        }
+
+        if let AST::IF_EXPRESSION { ref mut consequence, .. } = expression {
+            *consequence = Box::new(self.parse_block_statement().unwrap());
+        };
+
+        if self.peek_token_is(TokenKind::ELSE) {
+            self.next_token();
+
+            if !self.expect_peek(TokenKind::LBRACE) {
+                return None;
+            }
+
+            if let AST::IF_EXPRESSION { ref mut alternative, .. } = expression {
+                *alternative = Box::new(self.parse_block_statement().unwrap());
+            }
+        }
+
+        Some(expression)
+    }
+
+    fn parse_block_statement(&mut self) -> Option<AST> {
+        let mut block = AST::BLOCK_STATEMENT {
+            token: self.cur_token.clone(),
+            statements: Vec::new(),
+        };
+
+        self.next_token();
+
+        while !self.cur_token_is(TokenKind::RBRACE) && !self.cur_token_is(TokenKind::EOF) {
+            let mut statement = self.parse_statement().unwrap();
+
+            match &statement {
+                AST    => {
+                    if let AST::BLOCK_STATEMENT { ref mut statements, ..} = block {
+                        statements.push(Box::new(statement));
+                    };
+                },
+                _ => return None,
+            }
+            
+            self.next_token();
+        }
+
+        Some(block)
     }
     
     fn cur_token_is(&mut self, kind: TokenKind) -> bool {
@@ -682,5 +761,45 @@ pub mod tests {
             }
         }        
     }    
+    }
+
+    #[test]
+    fn test_if_expression() {
+        let input = "if (x < y) { x }".to_string();
+        
+        let lexier = Lexier::new(input);
+        let mut parser = Parser::new(lexier);
+
+        let program = parser.parse_program().unwrap();
+        parser.check_parser_errors();
+
+        match program {
+            AST::PROGRAM { ref statements } if statements.len() == 1 => (),
+            AST::PROGRAM { ref statements } =>
+                panic!("program does not contain 1 statements. got={}", statements.len()),
+            _ => panic!("parse_program() returned None. ")
+        }
+
+        if let AST::PROGRAM { ref statements } = program {
+            if let AST::EXPRESSION_STATEMENT { ref expression, .. } = *statements[0] {
+                match **expression {
+                    AST::IF_EXPRESSION  { ref token, ref condition, ref consequence, ref alternative } => {
+                        if !test_infix_expression(*condition.clone(), Type::STRING("x".to_string()), "<".to_string(), Type::STRING("y".to_string())) {
+                            panic!("invalide condition");
+                        }
+
+                        if let AST::BLOCK_STATEMENT { ref statements, .. } = **consequence {
+                            if statements.len() != 1 {
+                                panic!("consequence is not 1 statement. got={}", statements.len());
+                            }
+                        }
+
+                    }
+                    _ => panic!("expression not AST::IF_EXPRESSION."),
+                }
+                
+            }
+        }
+        
     }
 }

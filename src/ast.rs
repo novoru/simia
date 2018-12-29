@@ -2,7 +2,9 @@ use crate::token:: { TokenKind, Token };
 
 #[derive(Debug, Clone)]
 pub enum AST {
-    PROGRAM { statements: Vec<Box<AST>> },
+    PROGRAM {
+        statements: Vec<Box<AST>>
+    },
 
     EXPRESSION {
         token: Token,
@@ -50,6 +52,18 @@ pub enum AST {
     BOOLEAN {
         token: Token,
         value: bool,
+    },
+
+    IF_EXPRESSION {
+        token: Token,
+        condition: Box<AST>,
+        consequence: Box<AST>,
+        alternative: Box<AST>,
+    },
+
+    BLOCK_STATEMENT {
+        token: Token,
+        statements: Vec<Box<AST>>,
     }
     
 }
@@ -79,7 +93,7 @@ impl AST {
             AST::EXPRESSION { token } => {
                 string = format!("{}", token.literal);
             },
-            AST::INT_LITERAL { token,.. } => {
+            AST::INT_LITERAL { token, .. } => {
                 string = format!("{}", token.literal);
             },
             AST::PREFIX_EXPRESSION { operator, right, ..} => {
@@ -90,7 +104,21 @@ impl AST {
             },
             AST::BOOLEAN { value, ..} => {
                 string = format!("{}", value.to_string());
-            }
+            },
+            AST::IF_EXPRESSION { token, condition, consequence, alternative } => {
+                string = format!("{}{} {}", token.literal, condition.to_string(), consequence.to_string());
+                if  let AST::BLOCK_STATEMENT { ref token, ..} = **alternative {
+                    match token.kind {
+                        TokenKind::ILLEGAL => (),
+                        _ => string = format!("{}else {}", string, alternative.to_string()),
+                    }
+                };
+            },
+            AST::BLOCK_STATEMENT { statements, .. } => {
+                for statement in statements {
+                    string = format!("{}{}", string, statement.to_string());
+                }
+            },
         }
 
         string
@@ -108,6 +136,8 @@ impl AST {
             AST::PREFIX_EXPRESSION    {..} => "PREFIX_EXPRESSION".to_string(),
             AST::INFIX_EXPRESSION     {..} => "INFIX_EXPRESSION".to_string(),
             AST::BOOLEAN              {..} => "BOOLEAN".to_string(),
+            AST::IF_EXPRESSION        {..} => "IF_EXPRESSION".to_string(),
+            AST::BLOCK_STATEMENT      {..} => "BLOCK_STATEMENT".to_string(),
         }
     }
     
