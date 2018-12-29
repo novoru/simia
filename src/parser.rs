@@ -802,4 +802,77 @@ pub mod tests {
         }
         
     }
+
+    #[test]
+    fn test_if_else_expression() {
+        let input = "if (x < y) { x } else { y }".to_string();
+        
+        let lexier = Lexier::new(input);
+        let mut parser = Parser::new(lexier);
+
+        let program = parser.parse_program().unwrap();
+        parser.check_parser_errors();
+
+        match program {
+            AST::PROGRAM { ref statements } if statements.len() == 1 => (),
+            AST::PROGRAM { ref statements } =>
+                panic!("program does not contain 1 statements. got={}", statements.len()),
+            _ => panic!("parse_program() returned None. ")
+        }
+
+        if let AST::PROGRAM { ref statements } = program {
+            if let AST::EXPRESSION_STATEMENT { ref expression, .. } = *statements[0] {
+                match **expression {
+                    AST::IF_EXPRESSION  { ref token, ref condition, ref consequence, ref alternative } => {
+                        if !test_infix_expression(*condition.clone(), Type::STRING("x".to_string()), "<".to_string(), Type::STRING("y".to_string())) {
+                            panic!("invalide condition");
+                        }
+
+                        if let AST::BLOCK_STATEMENT { ref statements, .. } = **consequence {
+                            if statements.len() != 1 {
+                                panic!("consequence is not 1 statement. got={}", statements.len());
+                            }
+
+                            if let AST::EXPRESSION_STATEMENT { ref expression, .. } = *statements[0] {
+                                if !test_identifier(*expression.clone(), "x".to_string()) {
+                                    panic!("invalide consequence");
+                                }
+                            }
+                            
+                        }
+
+
+                        if let AST::BLOCK_STATEMENT { ref statements, .. } = **alternative {
+                            if statements.len() != 1 {
+                                panic!("alternative is not 1 statement. got={}", statements.len());
+                            }
+
+                            if let AST::EXPRESSION_STATEMENT { ref expression, .. } = *statements[0] {
+                                if !test_identifier(*expression.clone(), "y".to_string()) {
+                                    panic!("invalide alternative");
+                                }
+                            }
+                            
+                        }
+                        
+                        /*
+                        if let AST::BLOCK_STATEMENT { ref statements, .. } = **alternative {
+                            if statements.len() != 1 {
+                                panic!("alternative is not 1 statement. got={}", statements.len());
+                            }
+                            
+                            if !test_identifier(*statements[0].clone(), "y".to_string()) {
+                                panic!("invalide alternative");
+                            }
+                            
+                        }
+                         */
+                    }
+                    _ => panic!("expression not AST::IF_EXPRESSION."),
+                }
+                
+            }
+        }
+        
+    }    
 }
