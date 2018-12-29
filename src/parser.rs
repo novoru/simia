@@ -841,7 +841,6 @@ pub mod tests {
                             
                         }
 
-
                         if let AST::BLOCK_STATEMENT { ref statements, .. } = **alternative {
                             if statements.len() != 1 {
                                 panic!("alternative is not 1 statement. got={}", statements.len());
@@ -852,21 +851,7 @@ pub mod tests {
                                     panic!("invalide alternative");
                                 }
                             }
-                            
                         }
-                        
-                        /*
-                        if let AST::BLOCK_STATEMENT { ref statements, .. } = **alternative {
-                            if statements.len() != 1 {
-                                panic!("alternative is not 1 statement. got={}", statements.len());
-                            }
-                            
-                            if !test_identifier(*statements[0].clone(), "y".to_string()) {
-                                panic!("invalide alternative");
-                            }
-                            
-                        }
-                         */
                     }
                     _ => panic!("expression not AST::IF_EXPRESSION."),
                 }
