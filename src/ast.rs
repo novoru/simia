@@ -64,8 +64,13 @@ pub enum AST {
     BLOCK_STATEMENT {
         token: Token,
         statements: Vec<Box<AST>>,
+    },
+
+    FUNCTION_LITERAL {
+        token: Token,
+        parameters: Vec<Box<AST>>,
+        body: Box<AST>,
     }
-    
 }
 
 impl AST {
@@ -119,6 +124,18 @@ impl AST {
                     string = format!("{}{}", string, statement.to_string());
                 }
             },
+            AST::FUNCTION_LITERAL { token, parameters, body } => {
+                string = format!("{}(", token.literal);
+                for (i, parameter ) in parameters.iter().enumerate() {
+                    if i == 0 {
+                        string = format!("{}{}", string, parameter.to_string());
+                    }
+                    else {
+                        string = format!("{},{}", string, parameter.to_string());
+                    }
+                }
+                string = format!("{}) {}", string, body.to_string());
+            }
         }
 
         string
@@ -138,6 +155,7 @@ impl AST {
             AST::BOOLEAN              {..} => "BOOLEAN".to_string(),
             AST::IF_EXPRESSION        {..} => "IF_EXPRESSION".to_string(),
             AST::BLOCK_STATEMENT      {..} => "BLOCK_STATEMENT".to_string(),
+            AST::FUNCTION_LITERAL     {..} => "FUNCTION_LITERAL".to_string(),
         }
     }
     

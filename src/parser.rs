@@ -163,14 +163,15 @@ impl Parser {
         };
         
         match self.cur_token.kind {
-            TokenKind::IDENT  {..}  => left_exp = self.parse_identifier().unwrap(),
-            TokenKind::INT    {..}  => left_exp = self.parse_integer_literal().unwrap(),
-            TokenKind::BANG   {..} |
-            TokenKind::MINUS  {..}  => left_exp = self.parse_prefix_expression().unwrap(),
-            TokenKind::TRUE   {..} |
-            TokenKind::FALSE  {..}  => left_exp = self.parse_boolean().unwrap(),
-            TokenKind::LPAREN {..}  => left_exp = self.parse_grouped_expression().unwrap(),
-            TokenKind::IF     {..}  => left_exp = self.parse_if_expression().unwrap(),
+            TokenKind::IDENT    {..}  => left_exp = self.parse_identifier().unwrap(),
+            TokenKind::INT      {..}  => left_exp = self.parse_integer_literal().unwrap(),
+            TokenKind::BANG     {..} |
+            TokenKind::MINUS    {..}  => left_exp = self.parse_prefix_expression().unwrap(),
+            TokenKind::TRUE     {..} |
+            TokenKind::FALSE    {..}  => left_exp = self.parse_boolean().unwrap(),
+            TokenKind::LPAREN   {..}  => left_exp = self.parse_grouped_expression().unwrap(),
+            TokenKind::IF       {..}  => left_exp = self.parse_if_expression().unwrap(),
+            TokenKind::FUNCTION {..}  => left_exp = self.parse_function_literal().unwrap(),
             _ => (),
         }
 
@@ -351,6 +352,75 @@ impl Parser {
         }
 
         Some(block)
+    }
+
+    fn parse_function_literal(&mut self) -> Option<AST> {
+        let mut literal = AST::FUNCTION_LITERAL {
+            token: self.cur_token.clone(),
+            parameters: Vec::new(),
+            body: Box::new(
+                AST::EXPRESSION {
+                token:
+                Token {
+                    kind: TokenKind::ILLEGAL,
+                    literal: "".to_string(),
+                }
+            }),
+        };
+
+        if !self.expect_peek(TokenKind::LPAREN) {
+            return None;
+        }
+        
+        if let AST::FUNCTION_LITERAL { ref mut parameters, .. } = literal {
+            *parameters = self.parse_function_parameters().unwrap();
+        }
+        
+        if !self.expect_peek(TokenKind::LBRACE) {
+            return None;
+        }
+
+        if let AST::FUNCTION_LITERAL { ref mut body, .. } = literal {
+            *body = Box::new(self.parse_block_statement().unwrap());
+        }
+
+        Some(literal)
+    }
+
+    fn parse_function_parameters(&mut self) -> Option<Vec<Box<AST>>> {
+        let mut identifiers = Vec::new();
+
+        if self.peek_token_is(TokenKind::RPAREN) {
+            self.next_token();
+            return Some(identifiers);
+        }
+
+        self.next_token();
+
+        let mut identifier = AST::IDENT {
+            token: self.cur_token.clone(),
+            value: self.cur_token.literal.clone(),
+        };
+
+        identifiers.push(Box::new(identifier));
+
+        while self.peek_token_is(TokenKind::COMMA) {
+            self.next_token();
+            self.next_token();
+
+            identifier = AST::IDENT {
+                token: self.cur_token.clone(),
+                value: self.cur_token.literal.clone(),
+            };
+
+            identifiers.push(Box::new(identifier));
+        }
+
+        if !self.expect_peek(TokenKind::RPAREN) {
+            return None;
+        }
+
+        Some(identifiers)
     }
     
     fn cur_token_is(&mut self, kind: TokenKind) -> bool {
@@ -858,6 +928,60 @@ pub mod tests {
                 
             }
         }
+    }
+
+    #[test]
+    fn test_function_literal_parsing() {
+        let input = "fn (x, y) { x + y; }".to_string();
         
-    }    
+        let lexier = Lexier::new(input);
+        let mut parser = Parser::new(lexier);
+
+        let program = parser.parse_program().unwrap();
+        parser.check_parser_errors();
+
+        match program {
+            AST::PROGRAM { ref statements } if statements.len() == 1 => (),
+            AST::PROGRAM { ref statements } =>
+                panic!("program does not contain 1 statements. got={}", statements.len()),
+            _ => panic!("parse_program() returned None. ")
+        }
+
+        if let AST::PROGRAM { ref statements } = program {
+            if let AST::EXPRESSION_STATEMENT { ref expression, .. } = *statements[0] {
+                match **expression {
+                    AST::FUNCTION_LITERAL { ref parameters, ref body, .. } => {
+                        for (i, parameter) in parameters.iter().enumerate() {
+                            if i == 0 {
+                                if !test_identifier(*parameter.clone(), "x".to_string()) {
+                                    panic!("invalide parameter.");
+                                }
+                            }
+                            if i == 1 {
+                                if !test_identifier(*parameter.clone(), "y".to_string()) {
+                                    panic!("invalide parameter.");
+                                }
+                            }
+                        }
+                        
+                        if let AST::BLOCK_STATEMENT { ref statements, .. } = **body {
+                            if statements.len() != 1 {
+                                panic!("body is not 1 statement. got={}", statements.len());
+                            }
+                            
+                            if let AST::EXPRESSION_STATEMENT { ref expression, .. } = *statements[0] {
+                                if !test_infix_expression( *expression.clone(),
+                                                            Type::STRING("x".to_string()),
+                                                            "+".to_string(),
+                                                            Type::STRING("y".to_string())) {
+                                    panic!("invalide body");
+                                }
+                            }
+                        }
+                    }
+                    _ => panic!("expression not AST::FUNCTION_LITERAL."),
+                }
+            }
+        }
+    }
 }
