@@ -104,7 +104,6 @@ impl Parser {
             return None
         }
 
-        // TODO: change statement value to valid expression
         let value = Box::new(AST::EXPRESSION {
             token: Token { kind: TokenKind::ILLEGAL, literal: "".to_string() }
         });
@@ -116,29 +115,28 @@ impl Parser {
         Some( AST::LET_STATEMENT {
             token: self.cur_token.clone(),
             ident: ident,
-            value: value,
+            value: Box::new(self.parse_expression(PRECEDENCE::LOWEST).unwrap()),
         })
     }
 
     fn parse_return_statement(&mut self) -> Option<AST> {
-        // TODO: change return value to valid expression
-        let ret = AST::RETURN_STATEMENT {
-            token: self.cur_token.clone(),
-            return_value:  Box::new(AST::EXPRESSION {
-                token: Token {
-                    kind: TokenKind::ILLEGAL,
-                    literal: "".to_string(),
-                }
-            })
-        };
+
+        let token = self.cur_token.clone();
+
         self.next_token();
+
+        let return_value = Box::new(self.parse_expression(PRECEDENCE::LOWEST).unwrap());
         
         while !self.cur_token_is(TokenKind::SEMICOLON) {
             self.next_token();
         }
 
-        Some(ret)
+        Some( AST::RETURN_STATEMENT {
+            token: token,
+            return_value: return_value,  
+        })
     }
+        
 
     fn parse_expression_statement(&mut self) -> Option<AST> {
         let expression = self.parse_expression(PRECEDENCE::LOWEST);
