@@ -68,9 +68,15 @@ pub enum AST {
 
     FUNCTION_LITERAL {
         token: Token,
-        parameters: Vec<Box<AST>>,
-        body: Box<AST>,
-    }
+        parameters: Vec<Box<AST>>,  // AST::IDENT
+        body: Box<AST>,             // AST::BLOCK_STATEMENT
+    },
+
+    CALL_EXPRESSION {
+        token: Token,               // '(' token
+        function: Box<AST>,         // AST::IDENT or AST::FUNCTION_LITERAL
+        arguments: Vec<Box<AST>>,
+    },
 }
 
 impl AST {
@@ -131,10 +137,28 @@ impl AST {
                         string = format!("{}{}", string, parameter.to_string());
                     }
                     else {
-                        string = format!("{},{}", string, parameter.to_string());
+                        string = format!("{}, {}", string, parameter.to_string());
                     }
                 }
                 string = format!("{}) {}", string, body.to_string());
+            }
+            AST::CALL_EXPRESSION { ref function, arguments, .. } => {
+                match **function {
+                    AST::IDENT            { ref value, .. } => string = format!("{}", value.to_string()),
+                    AST::FUNCTION_LITERAL { .. }            => string = format!("{}", function.to_string()),
+                    _ => (),
+                }
+                string = format!("{}(", string);
+
+                for (i, argument) in arguments.iter().enumerate() {
+                    if i == 0 {
+                        string = format!("{}{}", string, argument.to_string());
+                    }
+                    else {
+                        string = format!("{}, {}", string, argument.to_string());
+                    }
+                }
+                string = format!("{})", string);
             }
         }
 
@@ -156,6 +180,7 @@ impl AST {
             AST::IF_EXPRESSION        {..} => "IF_EXPRESSION".to_string(),
             AST::BLOCK_STATEMENT      {..} => "BLOCK_STATEMENT".to_string(),
             AST::FUNCTION_LITERAL     {..} => "FUNCTION_LITERAL".to_string(),
+            AST::CALL_EXPRESSION      {..} => "CALL_EXPRESSION".to_string(),
         }
     }
     

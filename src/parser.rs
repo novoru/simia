@@ -24,6 +24,7 @@ pub fn precedences (kind: TokenKind) -> PRECEDENCE {
         TokenKind::MINUS    => PRECEDENCE::SUM,
         TokenKind::SLASH    => PRECEDENCE::PRODUCT,
         TokenKind::ASTERISK => PRECEDENCE::PRODUCT,
+        TokenKind::LPAREN   => PRECEDENCE::CALL,
         _                   => PRECEDENCE::LOWEST
     }
 }
@@ -188,6 +189,10 @@ impl Parser {
                     self.next_token();
                     left_exp = self.parse_infix_expression(Box::new(left_exp)).unwrap();
                 },
+                TokenKind::LPAREN   {..} => {
+                    self.next_token();
+                    left_exp = self.parse_call_expression(Box::new(left_exp)).unwrap();
+                }
                 _ => return Some(left_exp),
                 
             }
@@ -338,7 +343,7 @@ impl Parser {
 
         while !self.cur_token_is(TokenKind::RBRACE) && !self.cur_token_is(TokenKind::EOF) {
             let mut statement = self.parse_statement().unwrap();
-
+            
             match &statement {
                 AST    => {
                     if let AST::BLOCK_STATEMENT { ref mut statements, ..} = block {
@@ -421,6 +426,40 @@ impl Parser {
         }
 
         Some(identifiers)
+    }
+
+    fn parse_call_expression(&mut self, function: Box<AST> ) -> Option<AST> {
+        let expression = AST::CALL_EXPRESSION {
+            token: self.cur_token.clone(),
+            function:  function,
+            arguments: self.parse_call_arguments(), 
+        };
+        
+        Some(expression)
+    }
+
+    fn parse_call_arguments(&mut self) -> Vec<Box<AST>> {
+        let mut arguments = Vec::new();
+
+        if self.peek_token_is(TokenKind::RPAREN) {
+            self.next_token();
+            return arguments;
+        }
+
+        self.next_token();
+        arguments.push(Box::new(self.parse_expression(PRECEDENCE::LOWEST).unwrap()));
+
+        while self.peek_token_is(TokenKind::COMMA) {
+            self.next_token();
+            self.next_token();
+            arguments.push(Box::new(self.parse_expression(PRECEDENCE::LOWEST).unwrap()));
+        }
+
+        if !self.expect_peek(TokenKind::RPAREN) {
+            return Vec::new();
+        }
+
+        arguments
     }
     
     fn cur_token_is(&mut self, kind: TokenKind) -> bool {
@@ -641,7 +680,13 @@ fn test_operator_precedence_parsing() {
         ("(5 + 5) * 2", "((5 + 5) * 2)"),
         ("2 / (5 + 5)", "(2 / (5 + 5))"),
         ("-(5 + 5)", "(-(5 + 5))"),
-        ("!(true == true)", "(!(true == true))")
+        ("!(true == true)", "(!(true == true))"),
+        ("add(a)", "add(a)"),
+        ("add(a + b * c)", "add((a + (b * c)))"),
+        ("add(a + b * c) + d", "(add((a + (b * c))) + d)"),
+        ("a + add(b * c) + d", "((a + add((b * c))) + d)"),
+        ("add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))", "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"),
+        ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))")
     ];
 
     for (_i, test) in tests.iter().enumerate() {
