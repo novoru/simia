@@ -140,7 +140,7 @@ impl AST {
                         string = format!("{}, {}", string, parameter.to_string());
                     }
                 }
-                string = format!("{}) {}", string, body.to_string());
+                string = format!("{}) {{{}}}", string, body.to_string());
             }
             AST::CALL_EXPRESSION { ref function, arguments, .. } => {
                 match **function {

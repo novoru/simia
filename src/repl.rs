@@ -1,5 +1,6 @@
 use crate::lexier::Lexier;
 use crate::token::{ TokenKind };
+use crate::parser:: { Parser };
 use std::io::{ self, Write, stdin };
 
 
@@ -11,15 +12,22 @@ pub fn start() {
         match stdin().read_line(&mut input) {
             Ok(_) => {
                 let mut lexier = Lexier::new(input);
-                loop {
-                    let token = lexier.next_token();
-                    match token.kind {
-                        TokenKind::EOF => break,
-                        _ => println!("{{ kind: {}, literal: '{}' }}", token.get_kind_literal(), token.literal)
-                    }
+                let mut parser = Parser::new(lexier);
+                let program = parser.parse_program().unwrap();
+
+                if parser.errors.len() != 0 {
+                    print_parse_errors(parser.errors);
                 }
+                println!("{}", program.to_string());
+
             }
             Err(error) => println!("error: {}", error)
         }
+    }
+}
+
+fn print_parse_errors(errors: Vec<String>) {
+    for error in errors {
+        println!("{}", error);
     }
 }

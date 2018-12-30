@@ -34,7 +34,7 @@ pub struct Parser {
     pub lexier: Lexier,
     cur_token: Token,
     peek_token: Token,
-    errors: Vec<String>,
+    pub errors: Vec<String>,
 }
 
 impl Parser {
@@ -91,31 +91,33 @@ impl Parser {
 
     fn parse_let_statement(&mut self) -> Option<AST>{
 
+        let token = self.cur_token.clone();
+        
         if !self.expect_peek(TokenKind::IDENT) {
             return None
         }
         
         let ident = Box::new(AST::IDENT {
             token: self.cur_token.clone(),
-            value: self.cur_token.clone().literal,
+            value: self.cur_token.literal.clone(),
         });
 
         if !self.expect_peek(TokenKind::ASSIGN) {
             return None
         }
 
-        let value = Box::new(AST::EXPRESSION {
-            token: Token { kind: TokenKind::ILLEGAL, literal: "".to_string() }
-        });
+        self.next_token();
+        
+        let value = Box::new(self.parse_expression(PRECEDENCE::LOWEST).unwrap());
 
         while !self.cur_token_is(TokenKind::SEMICOLON) {
             self.next_token();
         }
 
         Some( AST::LET_STATEMENT {
-            token: self.cur_token.clone(),
+            token: token,
             ident: ident,
-            value: Box::new(self.parse_expression(PRECEDENCE::LOWEST).unwrap()),
+            value: value,
         })
     }
 
@@ -684,7 +686,7 @@ fn test_operator_precedence_parsing() {
         ("add(a + b * c) + d", "(add((a + (b * c))) + d)"),
         ("a + add(b * c) + d", "((a + add((b * c))) + d)"),
         ("add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))", "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"),
-        ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))")
+        ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"),
     ];
 
     for (_i, test) in tests.iter().enumerate() {
