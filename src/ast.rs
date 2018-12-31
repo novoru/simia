@@ -169,7 +169,7 @@ impl AST {
         match self {
             AST::PROGRAM              {..} => "PROGRAM".to_string(),
             AST::IDENT                {..} => "IDENT".to_string(),
-            AST::LET_STATEMENT        {..} =>  "LET_STATEMENT".to_string(),
+            AST::LET_STATEMENT        {..} => "LET_STATEMENT".to_string(),
             AST::RETURN_STATEMENT     {..} => "RETURN_STATEMENT".to_string(),
             AST::EXPRESSION_STATEMENT {..} => "EXPRESSION_STATEMENT".to_string(),
             AST::EXPRESSION           {..} => "EXPRESSION".to_string(),

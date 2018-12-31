@@ -1,3 +1,4 @@
+use crate::ast:: { AST };
 use crate::lexier::Lexier;
 use crate::token::{ TokenKind };
 use crate::parser:: { Parser };
@@ -17,9 +18,9 @@ pub fn start() {
 
                 if parser.errors.len() != 0 {
                     print_parse_errors(parser.errors);
+                    continue;
                 }
                 println!("{}", program.to_string());
-
             }
             Err(error) => println!("error: {}", error)
         }
