@@ -90,7 +90,6 @@ impl Parser {
     }
 
     fn parse_let_statement(&mut self) -> Option<AST>{
-
         let token = self.cur_token.clone();
         
         if !self.expect_peek(TokenKind::IDENT) {
@@ -107,10 +106,10 @@ impl Parser {
         }
 
         self.next_token();
-        
-        let value = Box::new(self.parse_expression(PRECEDENCE::LOWEST).unwrap());
 
-        while !self.cur_token_is(TokenKind::SEMICOLON) {
+        let mut value = Box::new(self.parse_expression(PRECEDENCE::LOWEST).unwrap());
+        
+        if self.cur_token_is(TokenKind::SEMICOLON) {
             self.next_token();
         }
 
@@ -122,7 +121,6 @@ impl Parser {
     }
 
     fn parse_return_statement(&mut self) -> Option<AST> {
-
         let token = self.cur_token.clone();
 
         self.next_token();
@@ -192,9 +190,8 @@ impl Parser {
                 TokenKind::LPAREN   {..} => {
                     self.next_token();
                     left_exp = self.parse_call_expression(Box::new(left_exp)).unwrap();
-                }
+                },
                 _ => return Some(left_exp),
-                
             }
 
         }
