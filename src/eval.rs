@@ -89,6 +89,32 @@ fn eval_infix_expression(operator: String, left: Object, right: Object) -> Objec
     if left.kind() == "Integer".to_string() && right.kind() == "Integer".to_string() {
         return eval_integer_infix_expression(operator, left, right);
     }
+    if operator == "==".to_string() {
+        match left {
+            Object::Boolean { value: lvalue } => {
+                match right {
+                    Object::Boolean { value: rvalue } => {
+                        return Object::Boolean { value: lvalue==rvalue};
+                    },
+                    _ => return Object::Null
+                }
+            },
+            _ => return Object::Null,
+        }
+    }
+    else if operator == "!=".to_string() {
+        match left {
+            Object::Boolean { value: lvalue } => {
+                match right {
+                    Object::Boolean { value: rvalue } => {
+                        return Object::Boolean { value: lvalue!=rvalue};
+                    },
+                    _ => return Object::Null
+                }
+            },
+            _ => return Object::Null,
+        }
+    }
     Object::Null
 }
 
@@ -122,6 +148,38 @@ fn eval_integer_infix_expression(operator: String, left: Object, right: Object) 
             if let Object::Integer { value: lvalue } = left {
                 if let Object::Integer { value: rvalue } = right {
                     return Object::Integer { value: lvalue / rvalue};
+                };
+            };
+            return Object::Null;
+        },
+        "<" => {
+            if let Object::Integer { value: lvalue } = left {
+                if let Object::Integer { value: rvalue } = right {
+                    return Object::Boolean { value: lvalue < rvalue};
+                };
+            };
+            return Object::Null;
+        },
+        ">" => {
+            if let Object::Integer { value: lvalue } = left {
+                if let Object::Integer { value: rvalue } = right {
+                    return Object::Boolean { value: lvalue > rvalue};
+                };
+            };
+            return Object::Null;
+        },
+        "==" => {
+            if let Object::Integer { value: lvalue } = left {
+                if let Object::Integer { value: rvalue } = right {
+                    return Object::Boolean { value: lvalue == rvalue};
+                };
+            };
+            return Object::Null;
+        },
+        "!=" => {
+            if let Object::Integer { value: lvalue } = left {
+                if let Object::Integer { value: rvalue } = right {
+                    return Object::Boolean { value: lvalue != rvalue};
                 };
             };
             return Object::Null;
