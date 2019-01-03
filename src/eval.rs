@@ -6,12 +6,7 @@ use crate::token::{ TokenKind };
 
 pub fn eval(node: Ast) -> Option<Object> {
     match node {
-        Ast::Program { statements, .. } => {
-            match eval_statements(statements) {
-                Some(value) => return Some(value),
-                None        => return None,
-            }
-        },
+        Ast::Program { .. } => return eval_program(node),
         Ast::ExpressionStatement { expression, .. } => {
             match eval(*expression) {
                 Some(value) => return Some(value),
@@ -41,8 +36,15 @@ pub fn eval(node: Ast) -> Option<Object> {
             };
             return Some(eval_infix_expression(operator, left, right));
         },
-        Ast::BlockStatement { statements, .. } => return eval_statements(statements),
+        Ast::BlockStatement { .. } => return eval_block_statement(node),
         Ast::IfExpression { .. } => return eval_if_expression(node),
+        Ast::ReturnStatement { return_value, .. } => {
+            let val = match eval(*return_value){
+                Some(value) => Box::new(value),
+                None        => Box::new(Object::Null),
+            };
+            return Some(Object::ReturnValue { value: val });
+        },
         _ => return None,
     }
 }
@@ -52,7 +54,12 @@ fn eval_statements(statements: Vec<Box<Ast>>) -> Option<Object> {
     
     for statement in statements {
         result = match eval(*statement) {
-            Some(value) => value,
+            Some(value) => {
+                match value {
+                    Object::ReturnValue { value: ret_value } => return Some(*ret_value),
+                    _ =>  value,
+                }
+            },
             None        => return None,
         }
     }
@@ -225,4 +232,40 @@ fn is_truthy(obj: Object) -> bool {
         Object::Boolean { value } => return value,
         _ => return true,
     }
+}
+
+fn eval_program(program: Ast) -> Option<Object> {
+    let mut result = Object::Null;
+    
+    if let Ast::Program { statements, .. } = program {
+        for statement in statements {
+            result = match eval(*statement) {
+                Some(value) => value,
+                None        => Object::Null,
+            };
+            if let Object::ReturnValue { value } = result {
+                return Some(*value);
+            };
+        }
+    }
+
+    Some(result)
+}
+
+fn eval_block_statement(block: Ast) -> Option<Object> {
+    let mut result = Object::Null;
+
+    if let Ast::BlockStatement { statements, .. } = block {
+        for statement in statements {
+            result = match eval(*statement){
+                Some(value) => value,
+                None        => Object::Null,
+            };
+            if result.kind() == "ReturnValue".to_string() {
+                return Some(result);
+            }
+        }
+    }
+    
+    Some(result)
 }

@@ -155,3 +155,28 @@ fn test_null_expression() {
         }
     }
 }
+
+#[test]
+fn test_return_statements() {
+    let tests = [("return 10;", 10),
+                 ("return 10; 9;", 10),
+                 ("return 2 * 5; 9;", 10),
+                 ("9; return 2 * 5; 9;", 10),
+                 ("\
+if (10 > 1) {\
+   if(10 > 1) {\
+      return 10;\
+   }\
+   return 1;\
+}\
+", 10)
+    ];
+
+    for test in &tests {
+        let evaluated = test_eval(test.0.to_string());
+        println!("test:\t{}", test.0);
+        if !test_integer_object(evaluated, test.1) {
+            panic!();
+        }
+    }    
+}
