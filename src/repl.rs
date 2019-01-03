@@ -12,7 +12,7 @@ pub fn start() {
         let mut input = String::new();
         match stdin().read_line(&mut input) {
             Ok(_) => {
-                let mut lexier = Lexier::new(input);
+                let lexier = Lexier::new(input);
                 let mut parser = Parser::new(lexier);
                 let program = parser.parse_program().unwrap();
 

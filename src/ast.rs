@@ -117,11 +117,11 @@ impl AST {
                 string = format!("{}", value.to_string());
             },
             AST::IF_EXPRESSION { token, condition, consequence, alternative } => {
-                string = format!("{}{} {}", token.literal, condition.to_string(), consequence.to_string());
+                string = format!("{}({}) {{ {} }}", token.literal, condition.to_string(), consequence.to_string());
                 if  let AST::BLOCK_STATEMENT { ref token, ..} = **alternative {
                     match token.kind {
                         TokenKind::ILLEGAL => (),
-                        _ => string = format!("{}else {}", string, alternative.to_string()),
+                        _ => string = format!("{}else {{ {} }}", string, alternative.to_string()),
                     }
                 };
             },
