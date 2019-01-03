@@ -28,7 +28,18 @@ pub fn eval(node: Ast) -> Option<Object> {
                 Some(value) => return Some(value),
                 None        => return None,
             }
-        }
+        },
+        Ast::InfixExpression { left, operator, right, token } => {
+            let left = match eval(*left){
+                Some(value) => value,
+                None        => Object::Null,
+            };
+            let right = match eval(*right){
+                Some(value) => value,
+                None        => Object::Null,
+            };
+            return Some(eval_infix_expression(operator, left, right));
+        },
         _ => return None,
     }
 }
@@ -44,8 +55,9 @@ fn eval_statements(statements: Vec<Box<Ast>>) -> Option<Object> {
     }
 
     match result {
-        Object::Integer { .. } => Some(result),
-        Object::Boolean { .. } => Some(result),
+        Object::Integer { .. } |
+        Object::Boolean { .. } |
+        Object::Null           => Some(result),
         _                      => None,
     }
 }
@@ -70,5 +82,50 @@ fn eval_minus_operator_expression(right: Object) -> Object {
     match right {
         Object::Integer { value } => return Object::Integer{value: -value},
         _                         => return Object::Null,
+    }
+}
+
+fn eval_infix_expression(operator: String, left: Object, right: Object) -> Object {
+    if left.kind() == "Integer".to_string() && right.kind() == "Integer".to_string() {
+        return eval_integer_infix_expression(operator, left, right);
+    }
+    Object::Null
+}
+
+fn eval_integer_infix_expression(operator: String, left: Object, right: Object) -> Object {
+    match operator.as_ref() {
+        "+" => {
+            if let Object::Integer { value: lvalue } = left {
+                if let Object::Integer { value: rvalue } = right {
+                    return Object::Integer { value: lvalue + rvalue};
+                };
+            };
+            return Object::Null;
+        },
+        "-" => {
+            if let Object::Integer { value: lvalue } = left {
+                if let Object::Integer { value: rvalue } = right {
+                    return Object::Integer { value: lvalue - rvalue};
+                };
+            };
+            return Object::Null;
+        },
+        "*" => {
+            if let Object::Integer { value: lvalue } = left {
+                if let Object::Integer { value: rvalue } = right {
+                    return Object::Integer { value: lvalue * rvalue};
+                };
+            };
+            return Object::Null;
+        },
+        "/" => {
+            if let Object::Integer { value: lvalue } = left {
+                if let Object::Integer { value: rvalue } = right {
+                    return Object::Integer { value: lvalue / rvalue};
+                };
+            };
+            return Object::Null;
+        },
+        _  => return Object::Null,
     }
 }
