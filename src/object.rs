@@ -22,9 +22,9 @@ impl Object {
 
     pub fn kind(&self) -> String {
         match self {
-            Object::Integer { .. } => "INTEGER".to_string(),
-            Object::Boolean { .. } => "BOOLEAN".to_string(),
-            Object::Null           => "NULL".to_string(),
+            Object::Integer { .. } => "Integer".to_string(),
+            Object::Boolean { .. } => "Boolean".to_string(),
+            Object::Null           => "Null".to_string(),
         }
     }
 }

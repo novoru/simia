@@ -18,6 +18,7 @@ pub fn eval(node: Ast) -> Option<Object> {
             }
         },
         Ast::IntegerLiteral      { value, .. }      => return Some(Object::Integer{value: value}),
+        Ast::Boolean             { value, .. }      => return Some(Object::Boolean{value: value}),
         _                                           => return None,
     }
 }
@@ -34,6 +35,7 @@ fn eval_statements(statements: Vec<Box<Ast>>) -> Option<Object> {
 
     match result {
         Object::Integer { .. } => Some(result),
+        Object::Boolean { .. } => Some(result),
         _                      => None,
     }
 }

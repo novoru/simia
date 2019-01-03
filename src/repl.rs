@@ -1,4 +1,5 @@
 use crate::ast:: { Ast };
+use crate::eval::{ eval };
 use crate::lexier::Lexier;
 use crate::token::{ TokenKind };
 use crate::parser:: { Parser };
@@ -20,7 +21,13 @@ pub fn start() {
                     print_parse_errors(parser.errors);
                     continue;
                 }
-                println!("{}", program.to_string());
+
+                let evaluated = eval(program);
+                match evaluated {
+                    Some(value) => println!("{}:\t{}", value.kind(), value.inspect()),
+                    None        => println!("none"),
+                }
+                
             }
             Err(error) => println!("error: {}", error)
         }

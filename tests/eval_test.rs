@@ -28,6 +28,22 @@ fn test_integer_object(obj: Object, expected: i64) -> bool {
     }
 }
 
+fn test_boolean_object(obj: Object, expected: bool) -> bool {
+    match obj {
+        Object::Boolean { value } => {
+            if value != expected {
+                eprintln!("object has wrong value. got={}, want={}", value, expected);
+                return false;
+            }
+            return true;
+        },
+        _                         => {
+            eprintln!("object is not Boolean. got={}", obj.kind());
+            return false;
+        },
+    }
+}
+
 #[test]
 fn test_eval_integer_expression() {
     let tests = [("5", 5),
@@ -41,4 +57,18 @@ fn test_eval_integer_expression() {
         }
     }
     
+}
+
+#[test]
+fn test_eval_boolean_expression() {
+    let tests = [("true", true),
+                 ("false", false)
+    ];
+    
+    for test in &tests {
+        let evaluated = test_eval(test.0.to_string());
+        if !test_boolean_object(evaluated, test.1) {
+            panic!();
+        }
+    }
 }
