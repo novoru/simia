@@ -1,136 +1,136 @@
 use crate::token:: { TokenKind, Token };
 
 #[derive(Debug, Clone)]
-pub enum AST {
-    PROGRAM {
-        statements: Vec<Box<AST>>
+pub enum Ast {
+    Program {
+        statements: Vec<Box<Ast>>
     },
 
-    EXPRESSION {
+    Expression {
         token: Token,
     },
 
-    IDENT {
+    Identifier {
         token: Token,
         value: String,
     },
     
-    LET_STATEMENT {
+    LetStatement {
         token: Token,
-        ident: Box<AST>,
-        value: Box<AST>,
+        ident: Box<Ast>,
+        value: Box<Ast>,
     },
 
-    RETURN_STATEMENT {
+    ReturnStatement {
         token: Token,
-        return_value: Box<AST>,
+        return_value: Box<Ast>,
     },
     
-    EXPRESSION_STATEMENT {
+    ExpressionStatement {
         token: Token,
-        expression: Box<AST>,
+        expression: Box<Ast>,
     },
 
-    INT_LITERAL {
+    IntegerLiteral {
         token: Token,
         value: i64,
     },
 
-    PREFIX_EXPRESSION {
+    PrefixExpression {
         token: Token,
         operator: String,
-        right: Box<AST>,
+        right: Box<Ast>,
     },
 
-    INFIX_EXPRESSION {
+    InfixExpression {
         token: Token,
-        left: Box<AST>,
+        left: Box<Ast>,
         operator: String,
-        right: Box<AST>,
+        right: Box<Ast>,
     },
 
-    BOOLEAN {
+    Boolean {
         token: Token,
         value: bool,
     },
 
-    IF_EXPRESSION {
+    IfExpression {
         token: Token,
-        condition: Box<AST>,
-        consequence: Box<AST>,
-        alternative: Box<AST>,
+        condition: Box<Ast>,
+        consequence: Box<Ast>,
+        alternative: Box<Ast>,
     },
 
-    BLOCK_STATEMENT {
+    BlockStatement {
         token: Token,
-        statements: Vec<Box<AST>>,
+        statements: Vec<Box<Ast>>,
     },
 
-    FUNCTION_LITERAL {
+    FunctionLiteral {
         token: Token,
-        parameters: Vec<Box<AST>>,  // AST::IDENT
-        body: Box<AST>,             // AST::BLOCK_STATEMENT
+        parameters: Vec<Box<Ast>>,  // Ast::Identifier
+        body: Box<Ast>,             // Ast::BlockStatement
     },
 
-    CALL_EXPRESSION {
+    CallExpression {
         token: Token,               // '(' token
-        function: Box<AST>,         // AST::IDENT or AST::FUNCTION_LITERAL
-        arguments: Vec<Box<AST>>,
+        function: Box<Ast>,         // Ast::Identifier or Ast::FunctionLiteral
+        arguments: Vec<Box<Ast>>,
     },
 }
 
-impl AST {
+impl Ast {
     pub fn to_string(&self) -> String {
         let mut string = String::new();
         match self {
-            AST::PROGRAM { statements } => {
+            Ast::Program { statements } => {
                 for statement in statements {
                     string = format!("{}{}", string, statement.to_string() );
                 }
             },
-            AST::IDENT { value, .. } => {
+            Ast::Identifier { value, .. } => {
                 string = format!("{}", value);
             },
-            AST::LET_STATEMENT {token, ident, value} => {
+            Ast::LetStatement {token, ident, value} => {
                 string = format!("{} {} = {};",
                                  token.literal, ident.to_string(), value.to_string());
             },
-            AST::RETURN_STATEMENT { token, return_value } => {
+            Ast::ReturnStatement { token, return_value } => {
                 string = format!("{} {};", token.literal, return_value.to_string());
             },
-            AST::EXPRESSION_STATEMENT { expression,.. } => {
+            Ast::ExpressionStatement { expression,.. } => {
                 string = format!("{}", expression.to_string());
             },
-            AST::EXPRESSION { token } => {
+            Ast::Expression { token } => {
                 string = format!("{}", token.literal);
             },
-            AST::INT_LITERAL { token, .. } => {
+            Ast::IntegerLiteral { token, .. } => {
                 string = format!("{}", token.literal);
             },
-            AST::PREFIX_EXPRESSION { operator, right, ..} => {
+            Ast::PrefixExpression { operator, right, ..} => {
                 string = format!("({}{})", operator, right.to_string());
             },
-            AST::INFIX_EXPRESSION { left, operator, right, .. } => {
+            Ast::InfixExpression { left, operator, right, .. } => {
                 string = format!("({} {} {})", left.to_string(), operator, right.to_string());
             },
-            AST::BOOLEAN { value, ..} => {
+            Ast::Boolean { value, ..} => {
                 string = format!("{}", value.to_string());
             },
-            AST::IF_EXPRESSION { token, condition, consequence, alternative } => {
+            Ast::IfExpression { token, condition, consequence, alternative } => {
                 string = format!("{}({}) {{ {} }}", token.literal, condition.to_string(), consequence.to_string());
-                if  let AST::BLOCK_STATEMENT { ref token, ..} = **alternative {
+                if  let Ast::BlockStatement { ref token, ..} = **alternative {
                     match token.kind {
-                        TokenKind::ILLEGAL => (),
+                        TokenKind::Illegal => (),
                         _ => string = format!("{}else {{ {} }}", string, alternative.to_string()),
                     }
                 };
             },
-            AST::BLOCK_STATEMENT { statements, .. } => {
+            Ast::BlockStatement { statements, .. } => {
                 for statement in statements {
                     string = format!("{}{}", string, statement.to_string());
                 }
             },
-            AST::FUNCTION_LITERAL { token, parameters, body } => {
+            Ast::FunctionLiteral { token, parameters, body } => {
                 string = format!("{}(", token.literal);
                 for (i, parameter ) in parameters.iter().enumerate() {
                     if i == 0 {
@@ -142,10 +142,10 @@ impl AST {
                 }
                 string = format!("{}) {{{}}}", string, body.to_string());
             }
-            AST::CALL_EXPRESSION { ref function, arguments, .. } => {
+            Ast::CallExpression { ref function, arguments, .. } => {
                 match **function {
-                    AST::IDENT            { ref value, .. } => string = format!("{}", value.to_string()),
-                    AST::FUNCTION_LITERAL { .. }            => string = format!("{}", function.to_string()),
+                    Ast::Identifier            { ref value, .. } => string = format!("{}", value.to_string()),
+                    Ast::FunctionLiteral { .. }            => string = format!("{}", function.to_string()),
                     _ => (),
                 }
                 string = format!("{}(", string);
@@ -167,20 +167,20 @@ impl AST {
 
     pub fn get_kind_literal(&self) -> String {
         match self {
-            AST::PROGRAM              {..} => "PROGRAM".to_string(),
-            AST::IDENT                {..} => "IDENT".to_string(),
-            AST::LET_STATEMENT        {..} => "LET_STATEMENT".to_string(),
-            AST::RETURN_STATEMENT     {..} => "RETURN_STATEMENT".to_string(),
-            AST::EXPRESSION_STATEMENT {..} => "EXPRESSION_STATEMENT".to_string(),
-            AST::EXPRESSION           {..} => "EXPRESSION".to_string(),
-            AST::INT_LITERAL          {..} => "INT_LITERAL".to_string(),
-            AST::PREFIX_EXPRESSION    {..} => "PREFIX_EXPRESSION".to_string(),
-            AST::INFIX_EXPRESSION     {..} => "INFIX_EXPRESSION".to_string(),
-            AST::BOOLEAN              {..} => "BOOLEAN".to_string(),
-            AST::IF_EXPRESSION        {..} => "IF_EXPRESSION".to_string(),
-            AST::BLOCK_STATEMENT      {..} => "BLOCK_STATEMENT".to_string(),
-            AST::FUNCTION_LITERAL     {..} => "FUNCTION_LITERAL".to_string(),
-            AST::CALL_EXPRESSION      {..} => "CALL_EXPRESSION".to_string(),
+            Ast::Program              {..} => "Program".to_string(),
+            Ast::Identifier           {..} => "Identifier".to_string(),
+            Ast::LetStatement         {..} => "LetStatement".to_string(),
+            Ast::ReturnStatement      {..} => "ReturnStatement".to_string(),
+            Ast::ExpressionStatement  {..} => "ExpressionStatement".to_string(),
+            Ast::Expression           {..} => "Expression".to_string(),
+            Ast::IntegerLiteral       {..} => "IntegerLiteral".to_string(),
+            Ast::PrefixExpression     {..} => "PrefixExpression".to_string(),
+            Ast::InfixExpression      {..} => "InfixExpression".to_string(),
+            Ast::Boolean              {..} => "Boolean".to_string(),
+            Ast::IfExpression         {..} => "IfExpression".to_string(),
+            Ast::BlockStatement       {..} => "BlockStatement".to_string(),
+            Ast::FunctionLiteral      {..} => "FunctionLiteral".to_string(),
+            Ast::CallExpression       {..} => "CallExpression".to_string(),
         }
     }
     
@@ -188,27 +188,27 @@ impl AST {
 
 #[test]
 fn test_ast_string() {
-    let program = AST::PROGRAM {
+    let program = Ast::Program {
         statements: vec![
             Box::new(
-                AST::LET_STATEMENT {
+                Ast::LetStatement {
                     token: Token {
-                        kind: TokenKind::LET,
+                        kind: TokenKind::Let,
                         literal: "let".to_string()
                     },
                     ident: Box::new(
-                        AST::IDENT {
+                        Ast::Identifier {
                             token: Token {
-                                kind: TokenKind::IDENT,
+                                kind: TokenKind::Identifier,
                                 literal: "myVar".to_string()
                         },
                             value: "myVar".to_string()
                         }
                     ),
                     value: Box::new(
-                        AST::EXPRESSION {
+                        Ast::Expression {
                             token: Token {
-                                kind: TokenKind::IDENT,
+                                kind: TokenKind::Identifier,
                                 literal: "anotherVar".to_string()
                             }
                         }
