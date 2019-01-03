@@ -44,6 +44,13 @@ fn test_boolean_object(obj: Object, expected: bool) -> bool {
     }
 }
 
+fn test_null_object(obj: Object) -> bool {
+    match obj {
+        Object::Null => return true,
+        _ => return false,
+    }
+}
+
 #[test]
 fn test_eval_integer_expression() {
     let tests = [("5", 5),
@@ -113,6 +120,37 @@ fn test_bang_operator() {
     for test in &tests {
         let evaluated = test_eval(test.0.to_string());
         if !test_boolean_object(evaluated, test.1) {
+            panic!();
+        }
+    }
+}
+
+#[test]
+fn test_if_expression() {
+    let tests = [("if (true) { 10 }", 10),
+                 ("if (1) { 10 }", 10),
+                 ("if (1 < 2) { 10 }", 10),
+                 ("if (1 > 2) { 10 } else { 20 }", 20),
+                 ("if (1 < 2) { 10 } else { 20 }", 10)
+    ];
+
+    for test in &tests {
+        let evaluated = test_eval(test.0.to_string());
+        if !test_integer_object(evaluated, test.1) {
+            panic!();
+        }
+    }
+}
+
+#[test]
+fn test_null_expression() {
+    let tests = ["if (false) { 10 }",
+                 "if (1 > 2) { 10 }",
+    ];
+
+    for test in &tests {
+        let evaluated = test_eval(test.to_string());
+        if !test_null_object(evaluated) {
             panic!();
         }
     }

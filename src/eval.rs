@@ -2,6 +2,7 @@ use crate::ast::{ Ast };
 use crate::lexier::{ Lexier };
 use crate::object::{ Object };
 use crate::parser::{ Parser };
+use crate::token::{ TokenKind };
 
 pub fn eval(node: Ast) -> Option<Object> {
     match node {
@@ -40,6 +41,8 @@ pub fn eval(node: Ast) -> Option<Object> {
             };
             return Some(eval_infix_expression(operator, left, right));
         },
+        Ast::BlockStatement { statements, .. } => return eval_statements(statements),
+        Ast::IfExpression { .. } => return eval_if_expression(node),
         _ => return None,
     }
 }
@@ -185,5 +188,41 @@ fn eval_integer_infix_expression(operator: String, left: Object, right: Object) 
             return Object::Null;
         },
         _  => return Object::Null,
+    }
+}
+
+fn eval_if_expression(node: Ast) -> Option<Object> {
+    match node {
+        Ast::IfExpression { condition, consequence, alternative, .. } => {
+            let condition = match eval(*condition) {
+                Some(value) => value,
+                None        => return Some(Object::Null),
+            };
+            if is_truthy(condition) {
+                return eval(*consequence);
+            }
+            else {
+                match *alternative {
+                    Ast::Expression { ref token, .. } => {
+                        if token.get_kind_literal() == "Illegal".to_string()  {
+                            return Some(Object::Null);
+                        }
+                        else {
+                            return eval(*alternative);
+                        }
+                    },
+                    _ => return eval(*alternative),
+                }
+            }
+        },
+        _ => return Some(Object::Null),
+    }
+}
+
+fn is_truthy(obj: Object) -> bool {
+    match obj {
+        Object::Null => return false,
+        Object::Boolean { value } => return value,
+        _ => return true,
     }
 }
