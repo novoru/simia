@@ -275,9 +275,15 @@ impl Parser {
     }
 
     fn parse_integer_literal(&mut self) -> Option<AST> {
+
+        let value = match self.cur_token.literal.clone().parse::<i64>() {
+            Ok(value) => value,
+            Err(_)    => return None,
+        };
+
         Some(AST::INT_LITERAL {
             token: self.cur_token.clone(),
-            value: self.cur_token.literal.clone().parse::<i64>().unwrap(),
+            value: value,
         })
     }
 
@@ -317,8 +323,12 @@ impl Parser {
 
         let precedence = self.cur_precedence();
         self.next_token();
+
         if let AST::INFIX_EXPRESSION { ref mut right, ..} = expression {
-            *right = Box::new(self.parse_expression(precedence).unwrap());
+            *right = match self.parse_expression(precedence) {
+                Some(value) => Box::new(value),
+                _           => return None
+            };
         }
 
         Some(expression)
@@ -334,7 +344,10 @@ impl Parser {
 
     fn parse_grouped_expression(&mut self) -> Option<AST> {
         self.next_token();
-        let expression = self.parse_expression(PRECEDENCE::LOWEST).unwrap();
+        let expression = match self.parse_expression(PRECEDENCE::LOWEST) {
+            Some(value) => value,
+            _           => return None,
+        };
 
         if !self.expect_peek(TokenKind::RPAREN) {
             return None;
@@ -365,7 +378,10 @@ impl Parser {
         self.next_token();
 
         if let AST::IF_EXPRESSION { ref mut condition, .. } = expression {
-            *condition = Box::new(self.parse_expression(PRECEDENCE::LOWEST).unwrap());
+            *condition = match self.parse_expression(PRECEDENCE::LOWEST) {
+                Some(value) => Box::new(value),
+                _           => return None,
+            };
         };
 
         if !self.expect_peek(TokenKind::RPAREN) {
@@ -377,7 +393,10 @@ impl Parser {
         }
 
         if let AST::IF_EXPRESSION { ref mut consequence, .. } = expression {
-            *consequence = Box::new(self.parse_block_statement().unwrap());
+            *consequence = match self.parse_block_statement() {
+                Some(value) => Box::new(value),
+                _           => return None,
+            };
         };
 
         if self.peek_token_is(TokenKind::ELSE) {
@@ -388,7 +407,10 @@ impl Parser {
             }
 
             if let AST::IF_EXPRESSION { ref mut alternative, .. } = expression {
-                *alternative = Box::new(self.parse_block_statement().unwrap());
+                *alternative = match self.parse_block_statement() {
+                    Some(value) => Box::new(value),
+                    _           => return None,
+                };
             }
         }
 
@@ -404,7 +426,10 @@ impl Parser {
         self.next_token();
 
         while !self.cur_token_is(TokenKind::RBRACE) && !self.cur_token_is(TokenKind::EOF) {
-            let mut statement = self.parse_statement().unwrap();
+            let mut statement = match self.parse_statement() {
+                Some(value) => value,
+                _           => return None,
+            };
             
             match &statement {
                 AST    => {
@@ -440,7 +465,10 @@ impl Parser {
         }
         
         if let AST::FUNCTION_LITERAL { ref mut parameters, .. } = literal {
-            *parameters = self.parse_function_parameters().unwrap();
+            *parameters = match self.parse_function_parameters() {
+                Some(value) => value,
+                _           => return None,
+            };
         }
         
         if !self.expect_peek(TokenKind::LBRACE) {
@@ -448,7 +476,10 @@ impl Parser {
         }
 
         if let AST::FUNCTION_LITERAL { ref mut body, .. } = literal {
-            *body = Box::new(self.parse_block_statement().unwrap());
+            *body = match self.parse_block_statement() {
+                Some(value) => Box::new(value),
+                _           => return None,
+            };
         }
 
         Some(literal)
@@ -509,12 +540,23 @@ impl Parser {
         }
 
         self.next_token();
-        arguments.push(Box::new(self.parse_expression(PRECEDENCE::LOWEST).unwrap()));
+        let mut argument = match self.parse_expression(PRECEDENCE::LOWEST) {
+            Some(value) => Box::new(value),
+            _           => return Vec::new(),
+        };
+        
+        arguments.push(argument);
 
         while self.peek_token_is(TokenKind::COMMA) {
             self.next_token();
             self.next_token();
-            arguments.push(Box::new(self.parse_expression(PRECEDENCE::LOWEST).unwrap()));
+
+            argument = match self.parse_expression(PRECEDENCE::LOWEST) {
+                Some(value) => Box::new(value),
+                _           => return Vec::new(),
+            };
+            
+            arguments.push(argument);
         }
 
         if !self.expect_peek(TokenKind::RPAREN) {
