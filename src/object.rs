@@ -12,6 +12,10 @@ pub enum Object{
     ReturnValue {
         value: Box<Object>,
     },
+
+    Error {
+        msg: String,
+    },
     
 }
 
@@ -22,6 +26,7 @@ impl Object {
             Object::Integer { value } => format!("{}", value),
             Object::Boolean { value } => format!("{}", value),
             Object::ReturnValue { value } => format!("{}", value.inspect()),
+            Object::Error {msg}       => format!("Error: {}", msg),
         }
     }
 
@@ -31,6 +36,11 @@ impl Object {
             Object::Integer { .. } => "Integer".to_string(),
             Object::Boolean { .. } => "Boolean".to_string(),
             Object::ReturnValue { .. } => "ReturnValue".to_string(),
+            Object::Error { .. }   => "Error".to_string(),
         }
     }
+}
+
+pub fn new_error(msg: String) -> Object {
+    Object::Error { msg: msg }
 }

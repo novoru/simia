@@ -1,6 +1,6 @@
 use crate::ast::{ Ast };
 use crate::lexier::{ Lexier };
-use crate::object::{ Object };
+use crate::object::{ Object, new_error };
 use crate::parser::{ Parser };
 use crate::token::{ TokenKind };
 
@@ -18,22 +18,37 @@ pub fn eval(node: Ast) -> Option<Object> {
         Ast::PrefixExpression { operator, right, .. } => {
             let right = match eval(*right){
                 Some(value) => value,
-                None        => Object::Null,
+                None        => return Some(new_error("prefix expression has no right hand side.".to_string())),
             };
+            
+            if is_error(&right) {
+                return Some(right);
+            }
+            
             match eval_prefix_expression(operator, right) {
                 Some(value) => return Some(value),
                 None        => return None,
             }
         },
-        Ast::InfixExpression { left, operator, right, token } => {
+        Ast::InfixExpression { left, operator, right, .. } => {
             let left = match eval(*left){
                 Some(value) => value,
-                None        => Object::Null,
+                None        => return Some(new_error("infix expression has no left hand side.".to_string())),
             };
+
+            if is_error(&left) {
+                return Some(left);
+            }
+            
             let right = match eval(*right){
                 Some(value) => value,
-                None        => Object::Null,
+                None        => return Some(new_error("infix expression has no right hand side.".to_string())),
             };
+
+            if is_error(&right) {
+                return Some(right);
+            }
+            
             return Some(eval_infix_expression(operator, left, right));
         },
         Ast::BlockStatement { .. } => return eval_block_statement(node),
@@ -43,6 +58,11 @@ pub fn eval(node: Ast) -> Option<Object> {
                 Some(value) => Box::new(value),
                 None        => Box::new(Object::Null),
             };
+
+            if is_error(&*val) {
+                return Some(*val);
+            }
+            
             return Some(Object::ReturnValue { value: val });
         },
         _ => return None,
@@ -91,13 +111,16 @@ fn eval_bang_operator_expression(right: Object) -> Object {
 fn eval_minus_operator_expression(right: Object) -> Object {
     match right {
         Object::Integer { value } => return Object::Integer{value: -value},
-        _                         => return Object::Null,
+        _                         => return new_error(format!("unknown operator: -{}", right.kind())),
     }
 }
 
 fn eval_infix_expression(operator: String, left: Object, right: Object) -> Object {
     if left.kind() == "Integer".to_string() && right.kind() == "Integer".to_string() {
         return eval_integer_infix_expression(operator, left, right);
+    }
+    else if left.kind() != right.kind() {
+        return new_error(format!("type mismatch: {} {} {}", left.kind(), operator, right.kind()));
     }
     if operator == "==".to_string() {
         match left {
@@ -106,10 +129,10 @@ fn eval_infix_expression(operator: String, left: Object, right: Object) -> Objec
                     Object::Boolean { value: rvalue } => {
                         return Object::Boolean { value: lvalue==rvalue};
                     },
-                    _ => return Object::Null
+                    _ => return new_error(format!("type mismatch: {} {} {}", left.kind(), operator, right.kind())),
                 }
             },
-            _ => return Object::Null,
+            _ => return new_error(format!("type mismatch: {} {} {}", left.kind(), operator, right.kind())),
         }
     }
     else if operator == "!=".to_string() {
@@ -119,13 +142,13 @@ fn eval_infix_expression(operator: String, left: Object, right: Object) -> Objec
                     Object::Boolean { value: rvalue } => {
                         return Object::Boolean { value: lvalue!=rvalue};
                     },
-                    _ => return Object::Null
+                    _ => return new_error(format!("type mismatch: {} {} {}", left.kind(), operator, right.kind())),
                 }
             },
-            _ => return Object::Null,
+            _ => return new_error(format!("type mismatch: {} {} {}", left.kind(), operator, right.kind())),
         }
     }
-    Object::Null
+    new_error(format!("unknown operator: {} {} {}", left.kind(), operator, right.kind()))
 }
 
 fn eval_integer_infix_expression(operator: String, left: Object, right: Object) -> Object {
@@ -136,7 +159,7 @@ fn eval_integer_infix_expression(operator: String, left: Object, right: Object) 
                     return Object::Integer { value: lvalue + rvalue};
                 };
             };
-            return Object::Null;
+            return new_error(format!("type mismatch: {} {} {}", left.kind(), operator, right.kind()));
         },
         "-" => {
             if let Object::Integer { value: lvalue } = left {
@@ -144,7 +167,7 @@ fn eval_integer_infix_expression(operator: String, left: Object, right: Object) 
                     return Object::Integer { value: lvalue - rvalue};
                 };
             };
-            return Object::Null;
+            return new_error(format!("type mismatch: {} {} {}", left.kind(), operator, right.kind()));
         },
         "*" => {
             if let Object::Integer { value: lvalue } = left {
@@ -152,7 +175,7 @@ fn eval_integer_infix_expression(operator: String, left: Object, right: Object) 
                     return Object::Integer { value: lvalue * rvalue};
                 };
             };
-            return Object::Null;
+            return new_error(format!("type mismatch: {} {} {}", left.kind(), operator, right.kind()));
         },
         "/" => {
             if let Object::Integer { value: lvalue } = left {
@@ -160,7 +183,7 @@ fn eval_integer_infix_expression(operator: String, left: Object, right: Object) 
                     return Object::Integer { value: lvalue / rvalue};
                 };
             };
-            return Object::Null;
+            return new_error(format!("type mismatch: {} {} {}", left.kind(), operator, right.kind()));
         },
         "<" => {
             if let Object::Integer { value: lvalue } = left {
@@ -168,7 +191,7 @@ fn eval_integer_infix_expression(operator: String, left: Object, right: Object) 
                     return Object::Boolean { value: lvalue < rvalue};
                 };
             };
-            return Object::Null;
+            return new_error(format!("type mismatch: {} {} {}", left.kind(), operator, right.kind()));
         },
         ">" => {
             if let Object::Integer { value: lvalue } = left {
@@ -176,7 +199,7 @@ fn eval_integer_infix_expression(operator: String, left: Object, right: Object) 
                     return Object::Boolean { value: lvalue > rvalue};
                 };
             };
-            return Object::Null;
+            return new_error(format!("type mismatch: {} {} {}", left.kind(), operator, right.kind()));
         },
         "==" => {
             if let Object::Integer { value: lvalue } = left {
@@ -184,7 +207,7 @@ fn eval_integer_infix_expression(operator: String, left: Object, right: Object) 
                     return Object::Boolean { value: lvalue == rvalue};
                 };
             };
-            return Object::Null;
+            return new_error(format!("type mismatch: {} {} {}", left.kind(), operator, right.kind()));
         },
         "!=" => {
             if let Object::Integer { value: lvalue } = left {
@@ -192,9 +215,9 @@ fn eval_integer_infix_expression(operator: String, left: Object, right: Object) 
                     return Object::Boolean { value: lvalue != rvalue};
                 };
             };
-            return Object::Null;
+            return new_error(format!("type mismatch: {} {} {}", left.kind(), operator, right.kind()));
         },
-        _  => return Object::Null,
+        _  => return new_error(format!("unknown operator: {} {} {}", left.kind(), operator, right.kind())),
     }
 }
 
@@ -205,9 +228,15 @@ fn eval_if_expression(node: Ast) -> Option<Object> {
                 Some(value) => value,
                 None        => return Some(Object::Null),
             };
+
+            if is_error(&condition) {
+                return Some(condition);
+            }
+            
             if is_truthy(condition) {
                 return eval(*consequence);
             }
+            
             else {
                 match *alternative {
                     Ast::Expression { ref token, .. } => {
@@ -243,8 +272,10 @@ fn eval_program(program: Ast) -> Option<Object> {
                 Some(value) => value,
                 None        => Object::Null,
             };
-            if let Object::ReturnValue { value } = result {
-                return Some(*value);
+            match  result {
+                Object::ReturnValue { value } => return Some(*value),
+                Object::Error { .. }          => return Some(result),
+                _ => (),
             };
         }
     }
@@ -261,11 +292,19 @@ fn eval_block_statement(block: Ast) -> Option<Object> {
                 Some(value) => value,
                 None        => Object::Null,
             };
-            if result.kind() == "ReturnValue".to_string() {
+            if result.kind() == "ReturnValue".to_string() || result.kind() == "Error" {
                 return Some(result);
             }
         }
     }
     
     Some(result)
+}
+
+fn is_error(obj: &Object) -> bool {
+    match obj {
+        Object::Null => (),
+        _            => return obj.kind() == "Error".to_string(),
+    }
+    false
 }

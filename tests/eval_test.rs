@@ -174,9 +174,39 @@ if (10 > 1) {\
 
     for test in &tests {
         let evaluated = test_eval(test.0.to_string());
-        println!("test:\t{}", test.0);
         if !test_integer_object(evaluated, test.1) {
             panic!();
+        }
+    }    
+}
+
+#[test]
+fn test_error_handling() {
+    let tests = [("5 + true", "type mismatch: Integer + Boolean"),
+                 ("5 + true; 5;", "type mismatch: Integer + Boolean"),
+                 ("-true", "unknown operator: -Boolean"),
+                 ("true + false", "unknown operator: Boolean + Boolean"),
+                 ("5; true + false; 5;", "unknown operator: Boolean + Boolean"),
+                 ("if(10 > 1) { true + false; }", "unknown operator: Boolean + Boolean"),
+                 ("\
+if (10 > 1) {\
+   if (10 > 1) {\
+      return true + false;\
+   }\
+   return 1;\
+}", "unknown operator: Boolean + Boolean")
+    ];
+
+    for test in &tests {
+        let evaluated = test_eval(test.0.to_string());
+
+        match evaluated {
+            Object::Error { msg } => {
+                if msg != test.1.to_string() {
+                    panic!("wrond error message. expected={}, got={}", test.1.to_string(), msg);
+                }
+            },
+            _ => eprintln!("no error object returned. got={}", evaluated.kind()),
         }
     }    
 }
