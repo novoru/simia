@@ -1,4 +1,5 @@
 use crate::ast:: { Ast };
+use crate::env::*;
 use crate::eval::{ eval };
 use crate::lexier::Lexier;
 use crate::token::{ TokenKind };
@@ -7,10 +8,12 @@ use std::io::{ self, Write, stdin };
 
 
 pub fn start() {
+    let mut env = Env::new();
     loop {
         print!(">> ");
         io::stdout().flush().unwrap();
         let mut input = String::new();
+        
         match stdin().read_line(&mut input) {
             Ok(_) => {
                 let lexier = Lexier::new(input);
@@ -22,7 +25,7 @@ pub fn start() {
                     continue;
                 }
 
-                let evaluated = eval(program);
+                let evaluated = eval(program, &mut env);
                 match evaluated {
                     Some(value) => println!("{}:\t{}", value.kind(), value.inspect()),
                     None        => println!("none"),

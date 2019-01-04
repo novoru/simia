@@ -1,14 +1,15 @@
 use crate::ast::{ Ast };
+use crate::env::*;
 use crate::lexier::{ Lexier };
 use crate::object::{ Object, new_error };
 use crate::parser::{ Parser };
 use crate::token::{ TokenKind };
 
-pub fn eval(node: Ast) -> Option<Object> {
+pub fn eval(node: Ast, env: &mut Env) -> Option<Object> {
     match node {
-        Ast::Program { .. } => return eval_program(node),
+        Ast::Program { .. } => return eval_program(node, env),
         Ast::ExpressionStatement { expression, .. } => {
-            match eval(*expression) {
+            match eval(*expression, env) {
                 Some(value) => return Some(value),
                 None        => return None,
             }
@@ -16,7 +17,7 @@ pub fn eval(node: Ast) -> Option<Object> {
         Ast::IntegerLiteral { value, .. }  => return Some(Object::Integer{value: value}),
         Ast::Boolean { value, .. }      => return Some(Object::Boolean{value: value}),
         Ast::PrefixExpression { operator, right, .. } => {
-            let right = match eval(*right){
+            let right = match eval(*right, env){
                 Some(value) => value,
                 None        => return Some(new_error("prefix expression has no right hand side.".to_string())),
             };
@@ -31,7 +32,7 @@ pub fn eval(node: Ast) -> Option<Object> {
             }
         },
         Ast::InfixExpression { left, operator, right, .. } => {
-            let left = match eval(*left){
+            let left = match eval(*left, env){
                 Some(value) => value,
                 None        => return Some(new_error("infix expression has no left hand side.".to_string())),
             };
@@ -40,7 +41,7 @@ pub fn eval(node: Ast) -> Option<Object> {
                 return Some(left);
             }
             
-            let right = match eval(*right){
+            let right = match eval(*right, env){
                 Some(value) => value,
                 None        => return Some(new_error("infix expression has no right hand side.".to_string())),
             };
@@ -51,10 +52,10 @@ pub fn eval(node: Ast) -> Option<Object> {
             
             return Some(eval_infix_expression(operator, left, right));
         },
-        Ast::BlockStatement { .. } => return eval_block_statement(node),
-        Ast::IfExpression { .. } => return eval_if_expression(node),
+        Ast::BlockStatement { .. } => return eval_block_statement(node, env),
+        Ast::IfExpression { .. } => return eval_if_expression(node, env),
         Ast::ReturnStatement { return_value, .. } => {
-            let val = match eval(*return_value){
+            let val = match eval(*return_value, env){
                 Some(value) => Box::new(value),
                 None        => Box::new(Object::Null),
             };
@@ -65,15 +66,32 @@ pub fn eval(node: Ast) -> Option<Object> {
             
             return Some(Object::ReturnValue { value: val });
         },
+        Ast::LetStatement { ident, value, .. } => {
+            let val = match eval(*value, env){
+                Some(value) => Box::new(value),
+                None        => Box::new(Object::Null),
+            };
+
+            if is_error(&*val) {
+                return Some(*val);
+            }
+            if let Ast::Identifier { value, ..} = *ident {
+                return Some(env.set(value, *val));
+            }
+            
+            return None;
+
+        },
+        Ast::Identifier { value, .. } => return eval_identifier(value, env),
         _ => return None,
     }
 }
 
-fn eval_statements(statements: Vec<Box<Ast>>) -> Option<Object> {
+fn eval_statements(statements: Vec<Box<Ast>>, env: &mut Env) -> Option<Object> {
     let mut result = Object::Null;
     
     for statement in statements {
-        result = match eval(*statement) {
+        result = match eval(*statement, env) {
             Some(value) => {
                 match value {
                     Object::ReturnValue { value: ret_value } => return Some(*ret_value),
@@ -221,10 +239,10 @@ fn eval_integer_infix_expression(operator: String, left: Object, right: Object) 
     }
 }
 
-fn eval_if_expression(node: Ast) -> Option<Object> {
+fn eval_if_expression(node: Ast, env: &mut Env) -> Option<Object> {
     match node {
         Ast::IfExpression { condition, consequence, alternative, .. } => {
-            let condition = match eval(*condition) {
+            let condition = match eval(*condition, env) {
                 Some(value) => value,
                 None        => return Some(Object::Null),
             };
@@ -234,7 +252,7 @@ fn eval_if_expression(node: Ast) -> Option<Object> {
             }
             
             if is_truthy(condition) {
-                return eval(*consequence);
+                return eval(*consequence, env);
             }
             
             else {
@@ -244,10 +262,10 @@ fn eval_if_expression(node: Ast) -> Option<Object> {
                             return Some(Object::Null);
                         }
                         else {
-                            return eval(*alternative);
+                            return eval(*alternative, env);
                         }
                     },
-                    _ => return eval(*alternative),
+                    _ => return eval(*alternative, env),
                 }
             }
         },
@@ -263,12 +281,12 @@ fn is_truthy(obj: Object) -> bool {
     }
 }
 
-fn eval_program(program: Ast) -> Option<Object> {
+fn eval_program(program: Ast, env: &mut Env) -> Option<Object> {
     let mut result = Object::Null;
     
     if let Ast::Program { statements, .. } = program {
         for statement in statements {
-            result = match eval(*statement) {
+            result = match eval(*statement, env) {
                 Some(value) => value,
                 None        => Object::Null,
             };
@@ -283,12 +301,12 @@ fn eval_program(program: Ast) -> Option<Object> {
     Some(result)
 }
 
-fn eval_block_statement(block: Ast) -> Option<Object> {
+fn eval_block_statement(block: Ast, env: &mut Env) -> Option<Object> {
     let mut result = Object::Null;
 
     if let Ast::BlockStatement { statements, .. } = block {
         for statement in statements {
-            result = match eval(*statement){
+            result = match eval(*statement, env){
                 Some(value) => value,
                 None        => Object::Null,
             };
@@ -299,6 +317,16 @@ fn eval_block_statement(block: Ast) -> Option<Object> {
     }
     
     Some(result)
+}
+
+fn eval_identifier(value: String, env: &mut Env) -> Option<Object> {
+    let val = env.get(value.clone());
+
+    if is_error(&val) {
+        return Some(new_error(format!("identifier not found: {}", value)));
+    }
+    
+    Some(val)
 }
 
 fn is_error(obj: &Object) -> bool {

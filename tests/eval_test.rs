@@ -1,4 +1,5 @@
 extern crate simia;
+use simia::env::*;
 use simia::eval::{ eval };
 use simia::lexier::{ Lexier };
 use simia::object::{ Object };
@@ -8,8 +9,9 @@ fn test_eval(input: String) -> Object {
     let lexier = Lexier::new(input);
     let mut parser = Parser::new(lexier);
     let program = parser.parse_program().unwrap();
+    let mut env = Env::new();
 
-    eval(program).unwrap()
+    eval(program, &mut env).unwrap()
 }
 
 fn test_integer_object(obj: Object, expected: i64) -> bool {
@@ -209,4 +211,20 @@ if (10 > 1) {\
             _ => eprintln!("no error object returned. got={}", evaluated.kind()),
         }
     }    
+}
+
+#[test]
+fn test_let_statements() {
+    let tests = [("let a = 5; a;", 5),
+                 ("let a = 5 * 5; a;", 25),
+                 ("let a = 5; let b = a; b;", 5),
+                 ("let a = 5; let b = a; let c = a + b + 5; c;", 15)
+    ];
+
+    for test in &tests {
+        let evaluated = test_eval(test.0.to_string());
+        if !test_integer_object(evaluated, test.1) {
+            panic!();
+        }
+    }        
 }
