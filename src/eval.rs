@@ -163,6 +163,9 @@ fn eval_infix_expression(operator: String, left: Object, right: Object) -> Objec
     if left.kind() == "Integer".to_string() && right.kind() == "Integer".to_string() {
         return eval_integer_infix_expression(operator, left, right);
     }
+    else if left.kind() == "String".to_string() && right.kind() == "String".to_string() {
+        return eval_string_infix_expression(operator, left, right);
+    }
     else if left.kind() != right.kind() {
         return new_error(format!("type mismatch: {} {} {}", left.kind(), operator, right.kind()));
     }
@@ -262,6 +265,36 @@ fn eval_integer_infix_expression(operator: String, left: Object, right: Object) 
             return new_error(format!("type mismatch: {} {} {}", left.kind(), operator, right.kind()));
         },
         _  => return new_error(format!("unknown operator: {} {} {}", left.kind(), operator, right.kind())),
+    }
+}
+
+fn eval_string_infix_expression(operator: String, left: Object, right: Object) -> Object{
+    match operator.as_ref() {
+        "+" => {
+            if let Object::String { value: lvalue } = left.clone() {
+                if let Object::String { value: rvalue } = right.clone() {
+                    return Object::String { value: lvalue + &rvalue };
+                };
+            };
+            return new_error(format!("type mismatch: {} {} {}", left.kind(), operator, right.kind()));
+        },
+        "==" => {
+            if let Object::String { value: lvalue } = left.clone() {
+                if let Object::String { value: rvalue } = right.clone() {
+                    return Object::Boolean { value: lvalue == rvalue };
+                };
+            };
+            return new_error(format!("type mismatch: {} {} {}", left.kind(), operator, right.kind()));
+        },
+        "!=" => {
+            if let Object::String { value: lvalue } = left.clone() {
+                if let Object::String { value: rvalue } = right.clone() {
+                    return Object::Boolean { value: lvalue != rvalue };
+                };
+            };
+            return new_error(format!("type mismatch: {} {} {}", left.kind(), operator, right.kind()));
+        },
+        _ => new_error(format!("unknown operator: {} {} {}", left.kind(), operator, right.kind())),
     }
 }
 

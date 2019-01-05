@@ -197,7 +197,8 @@ if (10 > 1) {\
       return true + false;\
    }\
    return 1;\
-}", "unknown operator: Boolean + Boolean")
+   }", "unknown operator: Boolean + Boolean"),
+                 ("\"Hello\" - \"World\"", "unknown operator: String - String")
     ];
 
     for test in &tests {
@@ -305,4 +306,19 @@ fn test_string_literal() {
         }
         _ => panic!("object is not String. got={}", evaluated.kind()),
     }
+}
+
+#[test]
+fn test_string_concatenation() {
+    let input = "\"Hello\" + \" \" + \"World\"".to_string();
+    let evaluated = test_eval(input);
+
+    match evaluated {
+        Object::String { value } => {
+            if value != "Hello World" {
+                panic!("String has wrong value. got={}", value);
+            }
+        }
+        _ => panic!("object is not String. got={}", evaluated.kind()),
+    }    
 }

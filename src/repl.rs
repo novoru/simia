@@ -27,7 +27,7 @@ pub fn start() {
 
                 let evaluated = eval(program, &mut env);
                 match evaluated {
-                    Some(value) => println!("{}:\t{}", value.kind(), value.inspect()),
+                    Some(value) => println!("{}", value.inspect()),
                     None        => println!("none"),
                 }
                 
