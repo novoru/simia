@@ -274,3 +274,20 @@ fn test_function_application() {
         }
     }        
 }
+
+#[test]
+fn test_closures() {
+    let input = "\
+let newAddr = fn(x) {\
+   fn(y) { x + y };\
+}\
+\
+let addTwo = newAddr(2);
+addTwo(2);
+";
+
+    if !test_integer_object(test_eval(input.to_string()), 4) {
+        panic!("");
+    }
+    
+}
