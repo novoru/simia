@@ -331,7 +331,8 @@ fn test_builtin_functions() {
     };
     
     let tests = [("len(\"\")", Type::Integer(0)),
-                 ("len(1)", Type::String("argument to 'len' not supported, got Integer".to_string()))
+                 ("len(1)", Type::String("argument to 'len' not supported, got Integer".to_string())),
+                 ("len(\"\", \"\")", Type::String("wrong number of arguments. got=2, want=1".to_string()))
     ];
 
     for test in &tests {
