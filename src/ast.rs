@@ -77,6 +77,11 @@ pub enum Ast {
         function: Box<Ast>,         // Ast::Identifier or Ast::FunctionLiteral
         arguments: Vec<Box<Ast>>,
     },
+
+    StringLiteral {
+        token: Token,
+        value: String,
+    },
 }
 
 impl Ast {
@@ -160,6 +165,7 @@ impl Ast {
                 }
                 string = format!("{})", string);
             }
+            Ast::StringLiteral { value, .. } => string = value.to_string(),
         }
 
         string
@@ -181,6 +187,7 @@ impl Ast {
             Ast::BlockStatement       {..} => "BlockStatement".to_string(),
             Ast::FunctionLiteral      {..} => "FunctionLiteral".to_string(),
             Ast::CallExpression       {..} => "CallExpression".to_string(),
+            Ast::StringLiteral        {..} => "StringLiteral".to_string(),
         }
     }
     

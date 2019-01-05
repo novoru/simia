@@ -291,3 +291,18 @@ addTwo(2);
     }
     
 }
+
+#[test]
+fn test_string_literal() {
+    let input = "\"Hello World\"".to_string();
+    let evaluated = test_eval(input);
+
+    match evaluated {
+        Object::String { value } => {
+            if value != "Hello World" {
+                panic!("String has wrong value. got={}", value);
+            }
+        }
+        _ => panic!("object is not String. got={}", evaluated.kind()),
+    }
+}

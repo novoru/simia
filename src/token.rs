@@ -4,7 +4,8 @@ pub enum TokenKind {
     Eof,
 
     Identifier,      // identifier
-    Integer,        // integer literal
+    Integer,         // integer literal
+    String,
 
     // operator
     Assign,     // '='
@@ -66,7 +67,8 @@ impl TokenKind {
             TokenKind::False      => "False".to_string(),
             TokenKind::If         => "If".to_string(),
             TokenKind::Else       => "Else".to_string(),
-            TokenKind::Return     => "Return".to_string()
+            TokenKind::Return     => "Return".to_string(),
+            TokenKind::String     => "String".to_string(),
         }
         
     }
@@ -107,7 +109,8 @@ impl Token {
             TokenKind::False      => "False".to_string(),
             TokenKind::If         => "If".to_string(),
             TokenKind::Else       => "Else".to_string(),
-            TokenKind::Return     => "Return".to_string()
+            TokenKind::Return     => "Return".to_string(),
+            TokenKind::String     => "String".to_string(),
         }
     }
 }

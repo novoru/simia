@@ -65,6 +65,7 @@ impl Lexier {
                 return self.lookup_ident(&ident)
             },
             '0' ... '9' => return Token {kind: TokenKind::Integer, literal: self.read_integer()},
+            '"' => token = Token {kind: TokenKind::String, literal: self.read_string()},
             _  => token = Token {kind: TokenKind::Illegal, literal: self.ch.to_string()},
         }
 
@@ -121,6 +122,24 @@ impl Lexier {
         integer
     }
 
+    /// Read string literal
+    fn read_string(&mut self) -> String {
+        let position = self.position + 1;
+        let mut string = String::new();
+
+        self.read_char();
+        
+        loop {
+            string.push(self.ch);
+            self.read_char();
+            if self.ch == '"' || self.ch == '\0' {
+                break;
+            }
+        }
+
+        string
+    }
+    
     /// Read peek character
     fn peek_char(&mut self) -> char{
         if self.read_position >= self.input.len() {
@@ -160,6 +179,8 @@ return false;\
 }\
 10 == 10;\
 10 != 9;\
+\"foobar\"\
+\"foo bar\"\
 ".to_string();
 
     let tests = [ Token { kind: TokenKind::Identifier, literal: "foo".to_string() },
@@ -255,6 +276,9 @@ return false;\
                   Token { kind: TokenKind::NotEq, literal: "!=".to_string() },
                   Token { kind: TokenKind::Integer, literal: "9".to_string() },
                   Token { kind: TokenKind::Semicolon, literal: ";".to_string() },
+                  Token { kind: TokenKind::String, literal: "foobar".to_string() },
+                  Token { kind: TokenKind::String, literal: "foo bar".to_string() },
+                  Token { kind: TokenKind::Eof, literal: "".to_string() }
                   
     ];
     
@@ -266,7 +290,11 @@ return false;\
         //println!("input:\t{{ kind: {}, literal: {} }}", token.get_kind_literal(), token.literal);
         //println!("test:\t{{ kind: {}, literal: {} }}", test.get_kind_literal(), test.literal);
         if token.get_kind_literal() != test.get_kind_literal() {
-            panic!("token.kind not equal test.kind.");
+            panic!("token.kind not {}. got={}", test.get_kind_literal(), token.get_kind_literal());
+        }
+
+        if token.literal != test.literal {
+            panic!("token.literal not {}. got={}", test.literal, token.literal);
         }
     }
     

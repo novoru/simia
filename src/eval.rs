@@ -108,6 +108,7 @@ pub fn eval(node: Ast, env: &mut Env) -> Option<Object> {
 
             Some(apply_function(func, args))
         },
+        Ast::StringLiteral { value, .. } => return Some(Object::String { value: value }),
         _ => return None,
     }
 }

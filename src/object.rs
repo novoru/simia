@@ -26,6 +26,10 @@ pub enum Object{
         body: Box<Ast>,
         env: Box<Env>,
     },
+
+    String {
+        value: String,
+    }
     
 }
 
@@ -50,6 +54,7 @@ impl Object {
                 }
                 return  format!("{}) {{{}}}", string, body.to_string());
             },
+            Object::String { value } => value.to_string(),
         }
     }
 
@@ -61,6 +66,7 @@ impl Object {
             Object::ReturnValue { .. } => "ReturnValue".to_string(),
             Object::Error { .. }   => "Error".to_string(),
             Object::Function { .. } => "Function".to_string(),
+            Object::String { .. } => "String".to_string(),
         }
     }
 }

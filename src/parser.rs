@@ -185,7 +185,7 @@ impl Parser {
                 literal: "".to_string()
             }
         };
-        
+
         match self.cur_token.kind {
             TokenKind::Identifier    {..}  => {
                 left_exp = match self.parse_identifier() {
@@ -227,6 +227,12 @@ impl Parser {
             }
             TokenKind::Function {..}  => {
                 left_exp = match self.parse_function_literal() {
+                    Some(value) => value,
+                    None        => return None,
+                }
+            },
+            TokenKind::String {..} => {
+                left_exp = match self.parse_string_literal() {
                     Some(value) => value,
                     None        => return None,
                 }
@@ -564,6 +570,10 @@ impl Parser {
         }
 
         arguments
+    }
+
+    fn parse_string_literal(&mut self) -> Option<Ast> {
+        Some(Ast::StringLiteral { token: self.cur_token.clone(), value: self.cur_token.literal.clone()})
     }
     
     fn cur_token_is(&mut self, kind: TokenKind) -> bool {
@@ -1137,6 +1147,36 @@ pub mod tests {
                     _ => panic!("expression not Ast::FunctionLiteral."),
                 }
             }
+        }
+    }
+
+    #[test]
+    fn test_string_literal_expression() {
+        let input = "\"Hello World\"".to_string();
+
+        let lexier = Lexier::new(input);
+        let mut parser = Parser::new(lexier);
+        let program = parser.parse_program();
+        parser.check_parser_errors();
+
+        let statement = match program {
+            Some(value) => match value {
+                Ast::Program { statements } => statements[0].clone(),
+                _                           => panic!(),
+            }
+            None => panic!(),
+        };
+
+        match *statement.clone() {
+            Ast::ExpressionStatement { expression, ..} => match *expression {
+                Ast::StringLiteral { value, .. } => {
+                    if value != "Hello World".to_string() {
+                        panic!("value not \"Hello World. got={}\"", value);
+                    }
+                },
+                _ => panic!("statement[0] not StringLiteral. got={}: {}", statement.get_kind_literal(), statement.to_string()),
+            },
+            _ => panic!(),
         }
     }
 }
