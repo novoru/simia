@@ -1,3 +1,6 @@
+use crate::ast::{ Ast };
+use crate::env::{ Env };
+
 #[derive(Debug, Clone)]
 pub enum Object{
     Null,
@@ -17,6 +20,12 @@ pub enum Object{
     Error {
         msg: String,
     },
+
+    Function {
+        parameters: Vec<Box<Ast>>,
+        body: Box<Ast>,
+        env: Box<Env>,
+    },
     
 }
 
@@ -27,7 +36,20 @@ impl Object {
             Object::Integer { value } => format!("{}", value),
             Object::Boolean { value } => format!("{}", value),
             Object::ReturnValue { value } => format!("{}", value.inspect()),
-            Object::Error {msg}       => format!("Error: {}", msg),
+            Object::Error { msg }       => format!("Error: {}", msg),
+            Object::Function { parameters, body, ..} => {
+                let mut string = String::new();
+                string = format!("fn(");
+                for (i, parameter) in parameters.iter().enumerate() {
+                    if i == 0 {
+                        string = format!("{}{}", string, parameter.to_string());
+                    }
+                    else {
+                        string = format!("{}, {}", string, parameter.to_string());
+                    }
+                }
+                return  format!("{}) {{{}}}", string, body.to_string());
+            },
         }
     }
 
@@ -38,6 +60,7 @@ impl Object {
             Object::Boolean { .. } => "Boolean".to_string(),
             Object::ReturnValue { .. } => "ReturnValue".to_string(),
             Object::Error { .. }   => "Error".to_string(),
+            Object::Function { .. } => "Function".to_string(),
         }
     }
 }

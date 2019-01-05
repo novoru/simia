@@ -1,4 +1,5 @@
 extern crate simia;
+use simia::ast::{ Ast };
 use simia::env::*;
 use simia::eval::{ eval };
 use simia::lexier::{ Lexier };
@@ -221,6 +222,51 @@ fn test_let_statements() {
                  ("let a = 5; let b = a; let c = a + b + 5; c;", 15)
     ];
 
+    for test in &tests {
+        let evaluated = test_eval(test.0.to_string());
+        if !test_integer_object(evaluated, test.1) {
+            panic!();
+        }
+    }        
+}
+
+#[test]
+fn test_function_object() {
+    let input = "fn(x) { x + 2;}";
+
+    let evaluated = test_eval(input.to_string());
+
+    match evaluated {
+        Object::Function { parameters, body, .. } => {
+            if parameters.len() != 1 {
+                panic!("function has wrong  parameters. got={}", parameters.len());
+            }
+
+            if let Ast::Identifier { value, .. } =  *parameters[0].clone() {
+                if value != "x".to_string() {
+                    panic!("parameter is not 'x'. got={}", value);
+                }
+            }
+
+            let expected_body = "(x + 2)";
+                        
+            if (*body).to_string() != expected_body.to_string() {
+                panic!("body is not {}. got={}", (*body).to_string(), expected_body);
+            }
+        }
+        _ => panic!("object is not function. got={}", evaluated.kind()),
+    }
+}
+
+#[test]
+fn test_function_application() {
+    let tests = [("let identity = fn(x) { x;}; identity(5);", 5),
+                 ("let identity = fn(x) { return x;}; identity(5);", 5),
+                 ("let double = fn(x) { x * 2;}; double(5);", 10),
+                 ("let add = fn(x, y) { return x + y;}; add(5, 5)", 10),
+                 ("let add = fn(x, y) { return x + y;}; add(5 + 5, add(5, 5));", 20),
+                 ("fn(x) { x;}(5)", 5)
+    ];
     for test in &tests {
         let evaluated = test_eval(test.0.to_string());
         if !test_integer_object(evaluated, test.1) {

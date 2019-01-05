@@ -68,21 +68,46 @@ pub fn eval(node: Ast, env: &mut Env) -> Option<Object> {
         },
         Ast::LetStatement { ident, value, .. } => {
             let val = match eval(*value, env){
-                Some(value) => Box::new(value),
-                None        => Box::new(Object::Null),
+                Some(value) => value,
+                None        => Object::Null,
             };
 
-            if is_error(&*val) {
-                return Some(*val);
+            if is_error(&val) {
+                return Some(val);
             }
             if let Ast::Identifier { value, ..} = *ident {
-                return Some(env.set(value, *val));
+                return Some(env.set(value, val));
             }
             
             return None;
 
         },
         Ast::Identifier { value, .. } => return eval_identifier(value, env),
+        Ast::FunctionLiteral { parameters, body, .. } => {
+            return Some(Object::Function{
+                parameters: parameters,
+                body: body,
+                env: Box::new(env.clone())
+            });
+        },
+        Ast::CallExpression { function, arguments, ..} => {
+            let func = match eval(*function, env) {
+                Some(value) => value,
+                None        => Object::Null,
+            };
+
+            if is_error(&func) {
+                return Some(func);
+            }
+
+            let args = eval_expressions(arguments, env);
+
+            if args.len() == 1 && is_error(&args[0]) {
+                return Some(args[0].clone());
+            }
+
+            Some(apply_function(func, args))
+        },
         _ => return None,
     }
 }
@@ -327,6 +352,68 @@ fn eval_identifier(value: String, env: &mut Env) -> Option<Object> {
     }
     
     Some(val)
+}
+
+fn eval_expressions(exps: Vec<Box<Ast>>, env: &mut Env) -> Vec<Object>{
+    let mut result = Vec::new();
+
+    for exp in exps {
+        let evaluated = match eval(*exp, env){
+            Some(value) => value,
+            None        => Object::Null,
+        };
+
+        if is_error(&evaluated) {
+            return vec![evaluated];
+        }
+
+        result.push(evaluated);
+    }
+
+    result
+}
+
+fn apply_function(func: Object, args: Vec<Object>) -> Object {
+    match func {
+        Object::Function { .. } => (),
+        _                       => return new_error(format!("not a function: {}", func.kind())),
+    }
+
+    let mut extend_env = extend_function_env(func.clone(), args);
+    let evaluated = match func {
+        Object::Function { body, ..} => match eval(*body, &mut extend_env) {
+            Some(value) => value,
+            None        => return Object::Null,
+        },
+        _                            => return Object::Null,
+    };
+    
+    unwrap_return_value(evaluated)
+}
+
+fn extend_function_env(func: Object, args: Vec<Object>) -> Env {
+    let mut env = match func.clone() {
+        Object::Function { env, .. } => Env::new_enclosed_env(env),
+        _                            => return Env::new(),
+    };
+
+    if let Object::Function { parameters, ..} = func {
+        for (i, parameter) in parameters.iter().enumerate() {
+            if let Ast::Identifier { value, .. } = (**parameter).clone() {
+                env.set(value, args[i].clone());
+            }
+        }
+    }
+
+    env
+}
+
+fn unwrap_return_value(obj: Object) -> Object {
+    if let Object::ReturnValue { value } = obj {
+        return *value;
+    }
+
+    obj
 }
 
 fn is_error(obj: &Object) -> bool {
