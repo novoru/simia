@@ -322,3 +322,36 @@ fn test_string_concatenation() {
         _ => panic!("object is not String. got={}", evaluated.kind()),
     }    
 }
+
+#[test]
+fn test_builtin_functions() {
+    enum Type{
+        Integer(i64),
+        String(String),
+    };
+    
+    let tests = [("len(\"\")", Type::Integer(0)),
+                 ("len(1)", Type::String("argument to 'len' not supported, got Integer".to_string()))
+    ];
+
+    for test in &tests {
+        let evaluated = test_eval(test.0.to_string());
+        match &test.1 {
+            Type::Integer(value) => {
+                if !test_integer_object(evaluated, *value) {
+                    panic!("");
+                }
+            },
+            Type::String(value)  => {
+                match evaluated {
+                    Object::Error { msg } => {
+                        if msg != *value {
+                            panic!("msg is not '{}', got='{}'", *value, msg);
+                        }
+                    },
+                    _ => panic!("object is not Error. got={}", evaluated.kind()),
+                }
+            },
+        }
+    }        
+}

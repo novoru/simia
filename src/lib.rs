@@ -6,3 +6,4 @@ pub mod parser;
 pub mod object;
 pub mod eval;
 pub mod env;
+pub mod builtins;

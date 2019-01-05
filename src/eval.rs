@@ -1,4 +1,5 @@
 use crate::ast::{ Ast };
+use crate::builtins::{ builtins };
 use crate::env::*;
 use crate::lexier::{ Lexier };
 use crate::object::{ Object, new_error };
@@ -380,12 +381,17 @@ fn eval_block_statement(block: Ast, env: &mut Env) -> Option<Object> {
 
 fn eval_identifier(value: String, env: &mut Env) -> Option<Object> {
     let val = env.get(value.clone());
+    
+    match val {
+        Object::Null => (),
+        _ => return Some(val),
+    }
 
-    if is_error(&val) {
-        return Some(new_error(format!("identifier not found: {}", value)));
+    if let Object::Builtin { function } = builtins(value.clone()) {
+        return Some(builtins(value.clone()));
     }
     
-    Some(val)
+    Some(new_error(format!("identifier not found: {}", value)))
 }
 
 fn eval_expressions(exps: Vec<Box<Ast>>, env: &mut Env) -> Vec<Object>{
@@ -409,20 +415,22 @@ fn eval_expressions(exps: Vec<Box<Ast>>, env: &mut Env) -> Vec<Object>{
 
 fn apply_function(func: Object, args: Vec<Object>) -> Object {
     match func {
-        Object::Function { .. } => (),
+        Object::Function { .. } => {
+            let mut extend_env = extend_function_env(func.clone(), args);
+            let evaluated = match func {
+                Object::Function { body, ..} => match eval(*body, &mut extend_env) {
+                    Some(value) => value,
+                    None        => return Object::Null,
+                },
+                _                            => return Object::Null,
+            };
+            
+            return unwrap_return_value(evaluated);            
+        },
+        Object::Builtin { function } => return function(args),
         _                       => return new_error(format!("not a function: {}", func.kind())),
     }
 
-    let mut extend_env = extend_function_env(func.clone(), args);
-    let evaluated = match func {
-        Object::Function { body, ..} => match eval(*body, &mut extend_env) {
-            Some(value) => value,
-            None        => return Object::Null,
-        },
-        _                            => return Object::Null,
-    };
-    
-    unwrap_return_value(evaluated)
 }
 
 fn extend_function_env(func: Object, args: Vec<Object>) -> Env {

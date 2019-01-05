@@ -130,11 +130,11 @@ impl Lexier {
         self.read_char();
         
         loop {
-            string.push(self.ch);
-            self.read_char();
             if self.ch == '"' || self.ch == '\0' {
                 break;
             }
+            string.push(self.ch);
+            self.read_char();
         }
 
         string
@@ -181,6 +181,7 @@ return false;\
 10 != 9;\
 \"foobar\"\
 \"foo bar\"\
+\"\"\
 ".to_string();
 
     let tests = [ Token { kind: TokenKind::Identifier, literal: "foo".to_string() },
@@ -276,8 +277,10 @@ return false;\
                   Token { kind: TokenKind::NotEq, literal: "!=".to_string() },
                   Token { kind: TokenKind::Integer, literal: "9".to_string() },
                   Token { kind: TokenKind::Semicolon, literal: ";".to_string() },
+
                   Token { kind: TokenKind::String, literal: "foobar".to_string() },
                   Token { kind: TokenKind::String, literal: "foo bar".to_string() },
+                  Token { kind: TokenKind::String, literal: "".to_string() },
                   Token { kind: TokenKind::Eof, literal: "".to_string() }
                   
     ];

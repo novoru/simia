@@ -29,7 +29,11 @@ pub enum Object{
 
     String {
         value: String,
-    }
+    },
+
+    Builtin {
+        function: fn(Vec<Object>) -> Object, 
+    },
     
 }
 
@@ -55,6 +59,7 @@ impl Object {
                 return  format!("{}) {{{}}}", string, body.to_string());
             },
             Object::String { value } => value.to_string(),
+            Object::Builtin { .. } => "builtin function".to_string(),
         }
     }
 
@@ -67,6 +72,7 @@ impl Object {
             Object::Error { .. }   => "Error".to_string(),
             Object::Function { .. } => "Function".to_string(),
             Object::String { .. } => "String".to_string(),
+            Object::Builtin { .. } => "Builtin".to_string(),
         }
     }
 }
