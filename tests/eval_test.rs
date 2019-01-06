@@ -150,7 +150,13 @@ fn test_null_expression() {
     let tests = ["if (false) { 10 }",
                  "if (1 > 2) { 10 }",
                  "[1, 2, 3][3]",
-                 "[1, 2, 3][-1]"
+                 "[1, 2, 3][-1]",
+                 "first([])",
+                 "first(\"\")",
+                 "last([])",
+                 "last(\"\")",
+                 "rest([])",
+                 "rest(\"\")"
     ];
 
     for test in &tests {
@@ -334,7 +340,25 @@ fn test_builtin_functions() {
     
     let tests = [("len(\"\")", Type::Integer(0)),
                  ("len(1)", Type::String("argument to 'len' not supported, got Integer".to_string())),
-                 ("len(\"\", \"\")", Type::String("wrong number of arguments. got=2, want=1".to_string()))
+                 ("len(\"\", \"\")", Type::String("wrong number of arguments. got=2, want=1".to_string())),
+                 ("len([1, 2, 3])", Type::Integer(3)),
+                 
+                 ("first([1,2,3])", Type::Integer(1)),
+                 ("first(\"Hello\")", Type::String("H".to_string())),
+                 ("first(\"\", \"\")", Type::String("wrong number of arguments. got=2, want=1".to_string())),
+
+                 ("last([1,2,3])", Type::Integer(3)),
+                 ("last(\"Hello\")", Type::String("o".to_string())),
+                 ("last(\"\", \"\")", Type::String("wrong number of arguments. got=2, want=1".to_string())),
+                 
+                 ("rest([1,2,3])[0]", Type::Integer(2)),
+                 ("rest(\"Hello\")", Type::String("ello".to_string())),
+                 ("rest(\"\", \"\")", Type::String("wrong number of arguments. got=2, want=1".to_string())),
+                 
+                 ("push([1,2,3], 4)[3]", Type::Integer(4)),
+                 ("push(\"Hello\", \" World\")", Type::String("Hello World".to_string())),
+                 ("push(\"\", \"\", \"\")", Type::String("wrong number of arguments. got=3, want=1".to_string())),
+                 ("push(\"\", [])", Type::String("argument to 'push' not String. got=Array".to_string())),
     ];
 
     for test in &tests {
@@ -352,6 +376,7 @@ fn test_builtin_functions() {
                             panic!("msg is not '{}', got='{}'", *value, msg);
                         }
                     },
+                    Object::String { value } => (),
                     _ => panic!("object is not Error. got={}", evaluated.kind()),
                 }
             },
