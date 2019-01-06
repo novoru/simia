@@ -149,6 +149,8 @@ fn test_if_expression() {
 fn test_null_expression() {
     let tests = ["if (false) { 10 }",
                  "if (1 > 2) { 10 }",
+                 "[1, 2, 3][3]",
+                 "[1, 2, 3][-1]"
     ];
 
     for test in &tests {
@@ -353,6 +355,46 @@ fn test_builtin_functions() {
                     _ => panic!("object is not Error. got={}", evaluated.kind()),
                 }
             },
+        }
+    }        
+}
+
+#[test]
+fn test_array_literals() {
+    let input = "[1, 2 * 2, 3 + 3]".to_string();
+
+    let evaluated = test_eval(input);
+
+    match evaluated {
+        Object::Array { elements } => {
+            if elements.len() != 3 {
+                panic!("array has wrong num of elements. got={}", elements.len());
+            }
+
+            test_integer_object(elements[0].clone(), 1);
+            test_integer_object(elements[1].clone(), 4);
+            test_integer_object(elements[2].clone(), 6);
+        },
+        _ => panic!("object is not Array. got={}", evaluated.kind()),
+    }
+}
+
+#[test]
+fn test_array_index_expressions() {
+    let tests = [("[1, 2, 3][0]", 1),
+                 ("[1, 2, 3][1]", 2),
+                 ("[1, 2, 3][2]", 3),
+                 ("let i = 0; [1][i]", 1),
+                 ("[1, 2, 3][1 + 1]", 3),
+                 ("let myArray = [1, 2, 3]; myArray[2];", 3),
+                 ("let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];", 6),
+                 ("let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i]", 2)
+    ];
+
+    for test in &tests {
+        let evaluated = test_eval(test.0.to_string());
+        if !test_integer_object(evaluated, test.1) {
+            panic!();
         }
     }        
 }

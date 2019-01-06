@@ -34,6 +34,10 @@ pub enum Object{
     Builtin {
         function: fn(Vec<Object>) -> Object, 
     },
+
+    Array {
+        elements: Vec<Object>,
+    },
     
 }
 
@@ -60,19 +64,32 @@ impl Object {
             },
             Object::String { value } => value.to_string(),
             Object::Builtin { .. } => "builtin function".to_string(),
+            Object::Array { elements }   => {let mut string = String::new();
+                string = format!("[");
+                for (i, element) in elements.iter().enumerate() {
+                    if i == 0 {
+                        string = format!("{}{}", string, (*element).inspect());
+                    }
+                    else {
+                        string = format!("{}, {}", string, (*element).inspect());
+                    }
+                }
+                return  format!("{}]", string);
+            }
         }
     }
 
     pub fn kind(&self) -> String {
         match self {
-            Object::Null           => "Null".to_string(),
-            Object::Integer { .. } => "Integer".to_string(),
-            Object::Boolean { .. } => "Boolean".to_string(),
+            Object::Null            => "Null".to_string(),
+            Object::Integer { .. }  => "Integer".to_string(),
+            Object::Boolean { .. }  => "Boolean".to_string(),
             Object::ReturnValue { .. } => "ReturnValue".to_string(),
-            Object::Error { .. }   => "Error".to_string(),
+            Object::Error { .. }    => "Error".to_string(),
             Object::Function { .. } => "Function".to_string(),
-            Object::String { .. } => "String".to_string(),
-            Object::Builtin { .. } => "Builtin".to_string(),
+            Object::String { .. }   => "String".to_string(),
+            Object::Builtin { .. }  => "Builtin".to_string(),
+            Object::Array { .. }    => "Array".to_string(),
         }
     }
 }

@@ -82,6 +82,17 @@ pub enum Ast {
         token: Token,
         value: String,
     },
+
+    ArrayLiteral {
+        token: Token,
+        elements: Vec<Box<Ast>>,
+    },
+
+    IndexExpression {
+        token: Token,
+        left: Box<Ast>,
+        index: Box<Ast>,
+    }
 }
 
 impl Ast {
@@ -166,6 +177,19 @@ impl Ast {
                 string = format!("{})", string);
             }
             Ast::StringLiteral { value, .. } => string = value.to_string(),
+            Ast::ArrayLiteral  { elements, .. } => {
+                string = format!("[");
+                for (i, element) in elements.iter().enumerate() {
+                    if i == 0 {
+                        string = format!("{}{}", string, element.to_string());
+                    }
+                    else {
+                        string = format!("{}, {}", string, element.to_string());
+                    }
+                }
+                string = format!("{}]", string);
+            },
+            Ast::IndexExpression { left, index, .. } => string = format!("({}[{}])", left.to_string(), index.to_string()),
         }
 
         string
@@ -188,6 +212,8 @@ impl Ast {
             Ast::FunctionLiteral      {..} => "FunctionLiteral".to_string(),
             Ast::CallExpression       {..} => "CallExpression".to_string(),
             Ast::StringLiteral        {..} => "StringLiteral".to_string(),
+            Ast::ArrayLiteral         {..} => "ArrayLiteral".to_string(),
+            Ast::IndexExpression      {..} => "IndexExpression".to_string(),
         }
     }
     

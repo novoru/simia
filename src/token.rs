@@ -27,6 +27,8 @@ pub enum TokenKind {
     Rparen,     // ')'
     Lbrace,     // '{'
     Rbrace,     // '}'
+    Lbracket,   // '['
+    Rbracket,   // ']'
 
     // keyword
     Function,   // 'fn'
@@ -69,6 +71,8 @@ impl TokenKind {
             TokenKind::Else       => "Else".to_string(),
             TokenKind::Return     => "Return".to_string(),
             TokenKind::String     => "String".to_string(),
+            TokenKind::Lbracket   => "Lbracket".to_string(),
+            TokenKind::Rbracket   => "Rbracket".to_string(),
         }
         
     }
@@ -111,6 +115,8 @@ impl Token {
             TokenKind::Else       => "Else".to_string(),
             TokenKind::Return     => "Return".to_string(),
             TokenKind::String     => "String".to_string(),
+            TokenKind::Lbracket   => "Lbracket".to_string(),
+            TokenKind::Rbracket   => "Rbracket".to_string(),
         }
     }
 }

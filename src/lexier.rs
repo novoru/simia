@@ -66,6 +66,8 @@ impl Lexier {
             },
             '0' ... '9' => return Token {kind: TokenKind::Integer, literal: self.read_integer()},
             '"' => token = Token {kind: TokenKind::String, literal: self.read_string()},
+            '[' => token = Token {kind: TokenKind::Lbracket, literal: self.ch.to_string()},
+            ']' => token = Token {kind: TokenKind::Rbracket, literal: self.ch.to_string()},
             _  => token = Token {kind: TokenKind::Illegal, literal: self.ch.to_string()},
         }
 
@@ -182,6 +184,7 @@ return false;\
 \"foobar\"\
 \"foo bar\"\
 \"\"\
+[1, 2];\
 ".to_string();
 
     let tests = [ Token { kind: TokenKind::Identifier, literal: "foo".to_string() },
@@ -281,6 +284,14 @@ return false;\
                   Token { kind: TokenKind::String, literal: "foobar".to_string() },
                   Token { kind: TokenKind::String, literal: "foo bar".to_string() },
                   Token { kind: TokenKind::String, literal: "".to_string() },
+
+                  Token { kind: TokenKind::Lbracket, literal: "[".to_string() },
+                  Token { kind: TokenKind::Integer, literal: "1".to_string() },
+                  Token { kind: TokenKind::Comma, literal: ",".to_string() },
+                  Token { kind: TokenKind::Integer, literal: "2".to_string() },
+                  Token { kind: TokenKind::Rbracket, literal: "]".to_string() },
+                  Token { kind: TokenKind::Semicolon, literal: ";".to_string() },
+
                   Token { kind: TokenKind::Eof, literal: "".to_string() }
                   
     ];

@@ -12,6 +12,7 @@ pub enum Precedence {
     Product,
     Prefix,
     Call,
+    Index,
 }
 
 pub fn precedences (kind: TokenKind) -> Precedence {
@@ -25,6 +26,7 @@ pub fn precedences (kind: TokenKind) -> Precedence {
         TokenKind::Slash    => Precedence::Product,
         TokenKind::Asterisk => Precedence::Product,
         TokenKind::Lparen   => Precedence::Call,
+        TokenKind::Lbracket => Precedence::Index,
         _                   => Precedence::Lowest
     }
 }
@@ -237,6 +239,12 @@ impl Parser {
                     None        => return None,
                 }
             }
+            TokenKind::Lbracket {..} => {
+                left_exp = match self.parse_array_literal() {
+                    Some(value) => value,
+                    None        => return None,
+                }
+            }
             _ => {
                 self.no_prefix_parse_fn_error(self.cur_token.kind);
                 return None;
@@ -262,6 +270,13 @@ impl Parser {
                 TokenKind::Lparen   {..} => {
                     self.next_token();
                     left_exp = match self.parse_call_expression(Box::new(left_exp)) {
+                        Some(value) => value,
+                        None        => return None,
+                    };
+                },
+                TokenKind::Lbracket {..} => {
+                    self.next_token();
+                    left_exp = match self.parse_index_expression(Box::new(left_exp)) {
                         Some(value) => value,
                         None        => return None,
                     };
@@ -531,7 +546,7 @@ impl Parser {
         let expression = Ast::CallExpression {
             token: self.cur_token.clone(),
             function:  function,
-            arguments: self.parse_call_arguments(), 
+            arguments: self.parse_expression_list(TokenKind::Rparen), 
         };
         
         Some(expression)
@@ -574,6 +589,57 @@ impl Parser {
 
     fn parse_string_literal(&mut self) -> Option<Ast> {
         Some(Ast::StringLiteral { token: self.cur_token.clone(), value: self.cur_token.literal.clone()})
+    }
+
+    fn parse_array_literal(&mut self) -> Option<Ast> {
+        let token = self.cur_token.clone();
+        let elements = self.parse_expression_list(TokenKind::Rbracket);
+
+        Some(Ast::ArrayLiteral { token: token, elements: elements})
+    }
+    
+    fn parse_expression_list(&mut self, end: TokenKind) -> Vec<Box<Ast>> {
+        let mut list = Vec::new();
+
+        if self.peek_token_is(end) {
+            self.next_token();
+            return list;
+        }
+
+        self.next_token();
+        if let Some(value) = self.parse_expression(Precedence::Lowest) {
+            list.push(Box::new(value));
+        }
+
+        while self.peek_token_is(TokenKind::Comma) {
+            self.next_token();
+            self.next_token();
+            if let Some(value) = self.parse_expression(Precedence::Lowest) {
+                list.push(Box::new(value));
+            }
+        }
+
+        if !self.expect_peek(end) {
+            return Vec::new();
+        }
+
+        list
+    }
+
+    fn parse_index_expression(&mut self, left: Box<Ast>) -> Option<Ast> {
+        let token = self.cur_token.clone();
+
+        self.next_token();
+        let index = match self.parse_expression(Precedence::Lowest) {
+            Some(value) => Box::new(value),
+            None        => return None,
+        };
+
+        if !self.expect_peek(TokenKind::Rbracket) {
+            return None;
+        }
+
+        Some(Ast::IndexExpression {token: token, left: left, index: index})
     }
     
     fn cur_token_is(&mut self, kind: TokenKind) -> bool {
@@ -807,6 +873,8 @@ fn test_operator_precedence_parsing() {
         ("a + add(b * c) + d", "((a + add((b * c))) + d)"),
         ("add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))", "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"),
         ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"),
+        ("a * [1, 2, 3, 4][b * c] * d", "((a * ([1, 2, 3, 4][(b * c)])) * d)"),
+        ("add(a * b[2], b[1], 2 * [1, 2][1])", "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))")
     ];
 
     for (_i, test) in tests.iter().enumerate() {
@@ -1175,6 +1243,46 @@ pub mod tests {
                     }
                 },
                 _ => panic!("statement[0] not StringLiteral. got={}: {}", statement.get_kind_literal(), statement.to_string()),
+            },
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn test_parsin_array_literals() {
+       let input = "[1, 2 * 2, 3 + 3]".to_string();
+
+        let lexier = Lexier::new(input);
+        let mut parser = Parser::new(lexier);
+        let program = parser.parse_program();
+        parser.check_parser_errors();
+
+        let statement = match program {
+            Some(value) => match value {
+                Ast::Program { statements } => statements[0].clone(),
+                _                           => panic!(),
+            }
+            None => panic!(),
+        };
+
+        match *statement.clone() {
+            Ast::ExpressionStatement { expression, ..} => match *expression {
+                Ast::ArrayLiteral { elements, .. } => {
+                    if elements.len() != 3 {
+                        panic!("elements.len() not 3. got={}", elements.len());
+                    }
+
+                    if !test_integer_literal(*elements[0].clone(), 1) {
+                        panic!();
+                    }
+                    if !test_infix_expression(*elements[1].clone(), Type::INT(2), "*".to_string(), Type::INT(2)) {
+                        panic!();
+                    }
+                    if !test_infix_expression(*elements[2].clone(), Type::INT(3), "+".to_string(), Type::INT(3)) {
+                        panic!();
+                    }
+                },
+                _ => panic!("statement[0] not ArrayLiteral. got={}: {}", statement.get_kind_literal(), statement.to_string()),
             },
             _ => panic!(),
         }

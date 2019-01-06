@@ -110,6 +110,35 @@ pub fn eval(node: Ast, env: &mut Env) -> Option<Object> {
             Some(apply_function(func, args))
         },
         Ast::StringLiteral { value, .. } => return Some(Object::String { value: value }),
+        Ast::ArrayLiteral { elements, token } => {
+            let elems = eval_expressions(elements, env);
+            if elems.len() == 1 && is_error(&elems[0]) {
+                return Some(elems[0].clone());
+            }
+
+            return Some(Object::Array { elements: elems})
+        },
+        Ast::IndexExpression { left, index, .. } => {
+            let l = match eval(*left, env) {
+                Some(value) => value,
+                None => Object::Null,
+            };
+
+            if is_error(&l) {
+                return Some(l);
+            }
+
+            let i = match eval(*index, env) {
+                Some(value) => value,
+                None => Object::Null,
+            };
+
+            if is_error(&i) {
+                return Some(i);
+            }
+
+            return eval_index_expression(l, i)
+        },
         _ => return None,
     }
 }
@@ -411,6 +440,34 @@ fn eval_expressions(exps: Vec<Box<Ast>>, env: &mut Env) -> Vec<Object>{
     }
 
     result
+}
+
+fn eval_index_expression(left: Object, index: Object) -> Option<Object> {
+    if left.kind() == "Array".to_string() && index.kind() == "Integer" {
+        return Some(eval_array_index_expression(left, index));
+    }
+    Some(new_error(format!("index operator not supported: {}", left.kind())))
+}
+
+fn eval_array_index_expression(array: Object, index: Object) -> Object  {
+    let idx = match index {
+        Object::Integer { value } => value as usize,
+        _ => return Object::Null,
+    };
+
+    let max = match array {
+        Object::Array { ref elements } => (&elements.len() - 1),
+        _ => return Object::Null,
+    };
+
+    if idx < 0 || idx > max {
+        return Object::Null;
+    }
+
+    match array {
+        Object::Array { ref elements } => elements[idx].clone(),
+        _ => Object::Null,
+    }
 }
 
 fn apply_function(func: Object, args: Vec<Object>) -> Object {
